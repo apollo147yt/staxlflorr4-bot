@@ -188,4 +188,4 @@ async def help1(ctx):
     embed.add_field(name="!endsac", value="End the current sacrifice session. (Admin only)", inline=False)
     await ctx.send(embed=embed)
 
-bot.run('MTI0MDQ2MDA2MzY2NDI0NjkxNQ.GqsJZA.-IwgY3lkI5QWcWhkcTvTBGESKuPLIQRCUZgFw8')
+bot.run('your-bot-token')
