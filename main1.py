@@ -144,6 +144,8 @@ async def spin(ctx):
 
         embed = discord.Embed(color=raritycolor)
         embed.add_field(name=f"{rarityNames[rarity]} {mob_name}", value=f"You got a {rarityNames[rarity]} {mob_name}!", inline=False)
+        if float(luck_multiplier) > 1:
+            embed.add_field(name="Frenzy!", value=f"{luck_multiplier}x luck from a sacrifice", inline=False)
         embed.add_field(name="Rare Mob Multiplier!", value=f"x{mob_multiplier}", inline=False)
         embed.add_field(name=f"+{final_credits} CREDITS", value=f"{rarityCredits[rarity]} ({rarityNames[rarity]}) x{mob_multiplier} ({mob_name})", inline=False)
 
@@ -175,17 +177,12 @@ async def spin(ctx):
 
 @bot.command()
 async def sac(ctx, amount: int):
-    if not ctx.author.guild_permissions.administrator:
-        await ctx.send("You need to be an admin to use this command.")
-        return
-
     user_id = ctx.author.id
     ensure_user_data(user_id)
     
-    # Apply sacrifice logic
     current_credits = get_user_credits(user_id)
     if amount > current_credits:
-        await ctx.send("You don't have enough credits to sacrifice this amount.")
+        await ctx.send("Nuh uh try again")
         return
 
     new_credits = current_credits - amount
@@ -195,7 +192,17 @@ async def sac(ctx, amount: int):
     db["sac_amount"] = amount
     db["sac_spins"] = 0
     db["sac_limit_reached"] = False
-    await ctx.send(f"Sacrificed {amount} credits. Sacrifice active!")
+
+    # Calculate luck multiplier
+    luck_multiplier = round(max(0.207125 * (2.34915 * amount + 463.458) ** 0.5 - 4.48083, 1), 1)
+    
+    embed = discord.Embed(color=0xFFFF00)
+    embed.add_field(name="The Flowr gods heed your sacrifice...", value="\u200b", inline=False)
+    embed.add_field(name=f"A {luck_multiplier}x luck boost has been activated!", value="\u200b", inline=False)
+    embed.add_field(name="Sacrificed Social Credit", value=f"{amount}", inline=False)
+    embed.add_field(name="Successful Sacrifice", value=f"{ctx.author.mention} sacrificed {amount} credits!", inline=False)
+
+    await ctx.send(embed=embed)
 
     save_db()
 
@@ -274,7 +281,9 @@ async def pay(ctx, user: discord.User, amount: int):
     set_user_credits(sender_id, sender_credits - amount)
     set_user_credits(recipient_id, get_user_credits(recipient_id) + amount)
 
-    await ctx.send(f"Paid {amount} credits to {user.name}.")
+    embed = discord.Embed(color=0xFFFF00)
+    embed.add_field(name=f"Success!", value=f"{ctx.author.mention} has given {recipient_id.mention} {amount} credits!", inline=False)
+    await ctx.send(embed=embed)
 
     save_db()
 
@@ -327,18 +336,24 @@ async def rig(ctx, rarity: int):
     ensure_user_data(user_id)
 
     final_credits = rarityCredits[rarity - 1]  # Indexing starts from 0
+    mob_index = random.randint(0, len(mobType) - 1)
+    mob_name = mobType[mob_index]
+    mob_multiplier = mobMulti[mob_index]
 
     current_credits = get_user_credits(user_id)
     new_credits = current_credits + final_credits
     set_user_credits(user_id, new_credits)
 
-    embed = discord.Embed(color=rarityColors[rarityNames[rarity - 1]])
-    embed.add_field(name=f"{rarityNames[rarity - 1]} Rigged Spin", value=f"You got a {rarityNames[rarity - 1]}!", inline=False)
-    embed.add_field(name="Credits Awarded", value=f"+{final_credits} CREDITS", inline=False)
+    raritycolor = rarityColors[rarityNames[rarity]] 
 
-    await ctx.send(embed=embed)
+    embed = discord.Embed(color=raritycolor)
+    embed.add_field(name=f"{rarityNames[rarity]} {mob_name}", value=f"You got a {rarityNames[rarity]} {mob_name}!", inline=False)
+    embed.add_field(name="Rare Mob Multiplier!", value=f"x{mob_multiplier}", inline=False)
+    embed.add_field(name=f"+{final_credits} CREDITS", value=f"{rarityCredits[rarity]} ({rarityNames[rarity]}) x{mob_multiplier} ({mob_name})", inline=False)
+    embed.add_field(name="RIGGED!", value="The luck is rel! Trust!", inline=False)
+    ctx.send(embed=embed)
 
     save_db()
 
 # Start the bot with your token
-bot.run('bot-token')
+bot.run('MTI0MDQ2MDA2MzY2NDI0NjkxNQ.GqsJZA.-IwgY3lkI5QWcWhkcTvTBGESKuPLIQRCUZgFw8')
