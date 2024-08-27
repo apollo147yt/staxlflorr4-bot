@@ -15,4 +15,4 @@
     replace the "spin" with the channel name you want the bot to be used in or delete it entirely depending on how you want to use         this bot
 
     There aint much else (or at least I think)
-    dm me if things are missing 
+    dm us if things are missing 
