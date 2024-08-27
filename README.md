@@ -8,11 +8,13 @@
     (This Bot is still being developed, there may [will] be bugs. If you find any please dm us using the discord usernames above)
     Enjoy the bot :) (or don't whatever)
 
-    In terms of adding this bot to your own server replace the "your-bot-token" at the bottom of the code, with your bot token. in the     "!spin" command change the line: 
+    to start copy the code down or download it whatever you prefer
+
+    In terms of adding this bot to your own server replace the "your-bot-token" at the bottom of the code, with your bot token. in the "!spin" command change the line: 
     "if ctx.channel.name != 'spin':
         await ctx.send("This command can only be used in the #spin channel.")
         return" 
-    replace the "spin" with the channel name you want the bot to be used in or delete it entirely depending on how you want to use         this bot
+    replace the "spin" with the channel name you want the bot to be used in or delete it entirely depending on how you want to use this bot
 
     There aint much else (or at least I think)
     dm us if things are missing 
