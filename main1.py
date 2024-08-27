@@ -356,4 +356,4 @@ async def rig(ctx, rarity: int):
     save_db()
 
 # Start the bot with your token
-bot.run('MTI0MDQ2MDA2MzY2NDI0NjkxNQ.GqsJZA.-IwgY3lkI5QWcWhkcTvTBGESKuPLIQRCUZgFw8')
+bot.run('your-bot-token')
