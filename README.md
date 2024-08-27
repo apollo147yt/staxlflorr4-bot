@@ -8,6 +8,8 @@
     (This Bot is still being developed, there may [will] be bugs. If you find any please dm us using the discord usernames above)
     Enjoy the bot :) (or don't whatever)
 
+    make sure you are using python (I dont know how many of you are brain dead so I had to put this here)
+
     to start copy the code down or download it whatever you prefer
 
     In terms of adding this bot to your own server replace the "your-bot-token" at the bottom of the code, with your bot token. in the "!spin" command change the line: 
