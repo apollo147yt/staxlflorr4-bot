@@ -16,5 +16,7 @@
         return" 
     replace the "spin" with the channel name you want the bot to be used in or delete it entirely depending on how you want to use this bot
 
+    Im not entirely sure if you need to use any terminal commands if anyone finds any that are needed dm us so we can make this bot more easily accessible :)
+
     There aint much else (or at least I think)
     dm us if things are missing 
