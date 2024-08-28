@@ -4,7 +4,7 @@
     if you have any suggestions with the code please make some :)
     this was a small project between us, starting off as a complete joke but seems to be coming together
     DM us on discord if you have any questions of improvements for the bot
-    $${\color{blue}DISCORD: \space \color{red}apollo147 \space \color{lightblue}and \space \colour{red}staxlflorr}$$
+    <span style="color:#0000FF"> DISCORD:</span>
     (This Bot is still being developed, there may [will] be bugs. If you find any please dm us using the discord usernames above)
     Enjoy the bot :) (or don't whatever)
 
