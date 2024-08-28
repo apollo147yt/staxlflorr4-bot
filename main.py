@@ -177,37 +177,39 @@ async def spin(ctx):
 
 @bot.command()
 async def sac(ctx, amount: int):
-    user_id = ctx.author.id
-    ensure_user_data(user_id)
+    try:
+        user_id = ctx.author.id
+        ensure_user_data(user_id)
+        
+        current_credits = get_user_credits(user_id)
+        new_credits = (current_credits) - (amount)
+        if amount > current_credits:
+            await ctx.send("Nuh uh try again")
+            return
+        
+        new_credits = current_credits - amount
+        set_user_credits(user_id, new_credits)
+
+        db["sac_active"] = True
+        db["sac_amount"] = amount
+        db["sac_spins"] = 0
+        db["sac_limit_reached"] = False
+
+        # Calculate luck multiplier
+        luck_multiplier = round(max(0.207125 * (2.34915 * amount + 463.458) ** 0.5 - 4.48083, 1), 1)
+        
+        embed = discord.Embed(color=0xFFFF00)
+        embed.add_field(name="The Flowr gods heed your sacrifice...", value="\u200b", inline=False)
+        embed.add_field(name=f"A {luck_multiplier}x luck boost has been activated!", value="\u200b", inline=False)
+        embed.add_field(name="Sacrificed Social Credit", value=f"{amount}", inline=False)
+        embed.add_field(name="Successful Sacrifice", value=f"{ctx.author.mention} sacrificed {amount} credits!", inline=False)
+
+        await ctx.send(embed=embed)
+
+        save_db()
     
-    current_credits = get_user_credits(user_id)
-    if amount > current_credits:
-        await ctx.send("Nuh uh try again")
-        return
-
-    new_credits = current_credits - amount
-    set_user_credits(user_id, new_credits)
-
-    db["sac_active"] = True
-    db["sac_amount"] = amount
-    db["sac_spins"] = 0
-    db["sac_limit_reached"] = False
-
-    # Calculate luck multiplier
-    luck_multiplier = round(max(0.207125 * (2.34915 * amount + 463.458) ** 0.5 - 4.48083, 1), 1)
-    
-    embed = discord.Embed(color=0xFFFF00)
-    embed.add_field(name="The Flowr gods heed your sacrifice...", value="\u200b", inline=False)
-    embed.add_field(name=f"A {luck_multiplier}x luck boost has been activated!", value="\u200b", inline=False)
-    embed.add_field(name="Sacrificed Social Credit", value=f"{amount}", inline=False)
-    embed.add_field(name="Successful Sacrifice", value=f"{ctx.author.mention} sacrificed {amount} credits!", inline=False)
-
-    await ctx.send(embed=embed)
-
-    save_db()
-
     except Exception as e:
-        print(f"Error in !spin command: {e}")
+        print(f"Error in !sac command: {e}")
         await ctx.send("My goofy ass did an oopsy, ping a bot coder to fix it.")
 
 @bot.command()
@@ -267,32 +269,33 @@ async def removecredits(ctx, user: discord.User, amount: int):
 
 @bot.command()
 async def pay(ctx, user: discord.User, amount: int):
-    sender_id = ctx.author.id
-    recipient_id = user.id
+    try:
+        sender_id = ctx.author.id
+        recipient_id = user.id
 
-    if amount <= 0:
-        await ctx.send("Amount must be greater than 0.")
-        return
+        if amount <= 0:
+            await ctx.send("Amount must be greater than 0.")
+            return
 
-    ensure_user_data(sender_id)
-    ensure_user_data(recipient_id)
+        ensure_user_data(sender_id)
+        ensure_user_data(recipient_id)
 
-    sender_credits = get_user_credits(sender_id)
-    if sender_credits < amount:
-        await ctx.send("You don't have enough credits to make this payment.")
-        return
+        sender_credits = get_user_credits(sender_id)
+        if sender_credits < amount:
+            await ctx.send("You don't have enough credits to make this payment.")
+            return
 
-    set_user_credits(sender_id, sender_credits - amount)
-    set_user_credits(recipient_id, get_user_credits(recipient_id) + amount)
+        set_user_credits(sender_id, sender_credits - amount)
+        set_user_credits(recipient_id, get_user_credits(recipient_id) + amount)
 
-    embed = discord.Embed(color=0xFFFF00)
-    embed.add_field(name=f"Success!", value=f"{ctx.author.mention} has given {recipient_id.mention} {amount} credits!", inline=False)
-    await ctx.send(embed=embed)
+        embed = discord.Embed(color=0xFFFF00)
+        embed.add_field(name=f"Success!", value=f"{ctx.author.mention} has given {user.mention} {amount} credits!", inline=False)
+        await ctx.send(embed=embed)
 
-    save_db()
+        save_db()
 
     except Exception as e:
-        print(f"Error in !spin command: {e}")
+        print(f"Error in !pay command: {e}")
         await ctx.send("My goofy ass did an oopsy, ping a bot coder to fix it.")
 
 @bot.command()
@@ -356,7 +359,7 @@ async def rig(ctx, rarity: int):
     embed.add_field(name=f"{rarityNames[rarity]} {mob_name}", value=f"You got a {rarityNames[rarity]} {mob_name}!", inline=False)
     embed.add_field(name="Rare Mob Multiplier!", value=f"x{mob_multiplier}", inline=False)
     embed.add_field(name=f"+{final_credits} CREDITS", value=f"{rarityCredits[rarity]} ({rarityNames[rarity]}) x{mob_multiplier} ({mob_name})", inline=False)
-    embed.add_field(name="RIGGED!", value="The luck is rel! Trust!", inline=False)
+    embed.add_field(name="RIGGED!", value="The luck is rel! (Trust)", inline=False)
     ctx.send(embed=embed)
 
     save_db()
