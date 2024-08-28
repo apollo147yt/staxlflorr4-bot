@@ -5,7 +5,7 @@ This bot is taking a while.
 This project started of as a complete joke and has turned into something decent.
 
 ## Instructions for setup
-Use python. (This bot is written in python. To edit the code use a code editor such as VScode.
+Use python. (This bot is written in python. To edit the code use a code editor such as VScode)
 
 In terms of adding this bot to your own server replace the "your-bot-token" at the bottom of the code, with your bot token. in the "!spin" command change the line:
 
@@ -17,7 +17,7 @@ In terms of adding this bot to your own server replace the "your-bot-token" at t
 
 replace the "spin" with the channel name you want the bot to be used in or delete it entirely depending on how you want to use this bot
 
-To make the bot you have to use the [discord devoloper portal](https://discord.com/developers).
+To make the bot you have to use the [discord devoloper portal](https://discord.com/developers). You have to make a bot becuase our bot is not availible for the public. (Only use for out bot is in our server.
 
 ## Help us please
 As this bot is still being developed, if you have any suggestions or find any bugs (there will be), please DM one of us on discord with the usernames below
