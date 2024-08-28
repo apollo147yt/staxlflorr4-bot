@@ -182,26 +182,31 @@ async def sac(ctx, amount: int):
         ensure_user_data(user_id)
         
         current_credits = get_user_credits(user_id)
-        new_credits = (current_credits) - (amount)
-        if amount > current_credits:
-            await ctx.send("Nuh uh try again")
-            return
         
+        # Calculate the 10% tax
+        tax = int(amount * 0.10)
+        net_amount = amount - tax
+
+        if amount > current_credits:
+            await ctx.send("Nuh uh, try again. You don't have enough credits (there is a 10% tax)")
+            return
+
+        # Deduct the net amount (after tax) from the user's credits
         new_credits = current_credits - amount
         set_user_credits(user_id, new_credits)
 
         db["sac_active"] = True
-        db["sac_amount"] = amount
+        db["sac_amount"] = net_amount  # Use net amount for the sacrifice
         db["sac_spins"] = 0
         db["sac_limit_reached"] = False
 
-        # Calculate luck multiplier
-        luck_multiplier = round(max(0.207125 * (2.34915 * amount + 463.458) ** 0.5 - 4.48083, 1), 1)
+        # Calculate luck multiplier based on net amount
+        luck_multiplier = round(max(0.207125 * (2.34915 * net_amount + 463.458) ** 0.5 - 4.48083, 1), 1)
         
         embed = discord.Embed(color=0xFFFF00)
         embed.add_field(name="The Flowr gods heed your sacrifice...", value="\u200b", inline=False)
         embed.add_field(name=f"A {luck_multiplier}x luck boost has been activated!", value="\u200b", inline=False)
-        embed.add_field(name="Sacrificed Social Credit", value=f"{amount}", inline=False)
+        embed.add_field(name="Sacrificed Social Credit", value=f"{net_amount} (after 10% tax of {tax})", inline=False)
         embed.add_field(name="Successful Sacrifice", value=f"{ctx.author.mention} sacrificed {amount} credits!", inline=False)
 
         await ctx.send(embed=embed)
@@ -280,16 +285,22 @@ async def pay(ctx, user: discord.User, amount: int):
         ensure_user_data(sender_id)
         ensure_user_data(recipient_id)
 
+        # Calculate the 10% tax
+        tax = int(amount * 0.10)
+        net_amount = amount - tax
+
         sender_credits = get_user_credits(sender_id)
         if sender_credits < amount:
-            await ctx.send("You don't have enough credits to make this payment.")
+            await ctx.send("You don't have enough credits to make this payment (there is a 10% tax)")
             return
 
+        # Deduct the full amount from the sender's credits
         set_user_credits(sender_id, sender_credits - amount)
-        set_user_credits(recipient_id, get_user_credits(recipient_id) + amount)
+        # Add the net amount (after tax) to the recipient's credits
+        set_user_credits(recipient_id, get_user_credits(recipient_id) + net_amount)
 
         embed = discord.Embed(color=0xFFFF00)
-        embed.add_field(name=f"Success!", value=f"{ctx.author.mention} has given {user.mention} {amount} credits!", inline=False)
+        embed.add_field(name="Success!", value=f"{ctx.author.mention} has given {user.mention} {net_amount} credits! (after 10% tax of {tax})", inline=False)
         await ctx.send(embed=embed)
 
         save_db()
