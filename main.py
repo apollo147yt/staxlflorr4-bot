@@ -105,11 +105,6 @@ mobMulti = [
 async def on_ready():
     print(f'We have logged in as {bot.user}')
 
-    @bot.event
-    async def on_command_error(ctx, error):
-        print(f"Error occurred: {error}")
-        await ctx.send("An error occurred. Please check the bot logs for details.")
-
 # Spin command
 @bot.command()
 async def spin(ctx):
@@ -231,7 +226,7 @@ class MarketAddModal(discord.ui.Modal):
         self.add_item(discord.ui.TextInput(label="Description of Service", placeholder="Enter a description", custom_id="description_input", required=True))
         self.add_item(discord.ui.TextInput(label="Price of Service (min 10k)", placeholder="Enter the price", custom_id="price_input", required=True))
 
-    async def callback(self, interaction: discord.Interaction):
+    async def on_submit(self, interaction: discord.Interaction):
         name = self.children[0].value
         description = self.children[1].value
         price_str = self.children[2].value
@@ -255,16 +250,23 @@ class MarketAddModal(discord.ui.Modal):
                 "description": description,
                 "price": price
             }
+
+            # Deducting the 10k credits
+            ensure_user_data(self.user_id)
+            current_credits = get_user_credits(self.user_id)
+            new_credits = current_credits - 10000
+            set_user_credits(self.user_id, new_credits)
+
             save_db()
             await interaction.response.send_message(f"Market item '{name}' added successfully.", ephemeral=True)
         except Exception as e:
             print(f"An error occurred: {e}")
-            await interaction.response.send_message("An error occurred while adding the market item. Please try again later.", ephemeral=True)
+            await interaction.response.send_message("Why the fu- ping a bot coder to fix this", ephemeral=True)
 
 # MarketAddButton class
 class MarketAddButton(discord.ui.Button):
     def __init__(self):
-        super().__init__(label="Add Market Item", style=discord.ButtonStyle.blurple)
+        super().__init__(label="Create!", style=discord.ButtonStyle.blurple)
 
     async def callback(self, interaction: discord.Interaction):
         modal = MarketAddModal(interaction.user.id)
@@ -275,7 +277,7 @@ class MarketAddButton(discord.ui.Button):
 async def addmarket(ctx):
     view = discord.ui.View()
     view.add_item(MarketAddButton())
-    await ctx.send("Click the button below to add a market item.", view=view)
+    await ctx.send("Click the button below to add a market item (note there is a 10k fee).", view=view)
 
 # Market Command
 @bot.command()
@@ -299,24 +301,32 @@ async def market(ctx, page: int = 1):
     
     await ctx.send(embed=embed)
 
-# Remove Market Command
+from discord.ext import commands
+
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def delmarket(ctx, item_id: int):
     item_id_str = str(item_id)
-    item = db["market"].get(item_id_str)
     
+    # Check if the item exists
+    item = db["market"].get(item_id_str)
     if not item:
         await ctx.send("Item not found.")
         return
-    
-    if item["owner"] != str(ctx.author.id):
+
+    # If the user is not an admin, check if they are the owner of the item
+    if not ctx.author.guild_permissions.administrator and item["owner"] != str(ctx.author.id):
         await ctx.send("You are not the owner of this item.")
         return
-    
-    del db["market"][item_id_str]
-    save_db()
-    await ctx.send(f"Market item '{item['name']}' removed successfully.")
+
+    # Try to delete the item and save the database
+    try:
+        del db["market"][item_id_str]
+        save_db()
+        await ctx.send(f"Market item '{item['name']}' (ID: {item_id_str}) removed successfully.")
+    except Exception as e:
+        await ctx.send("An error occurred while trying to remove the item. Please try again later.")
+        print(f"Error removing market item: {e}")
 
 @bot.command()
 @commands.is_owner()
@@ -556,4 +566,4 @@ async def help1(ctx):
 
     save_db()
 
-bot.run('your-bot-token')
+bot.run('your bot token')
