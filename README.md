@@ -29,4 +29,5 @@ As this bot is still being developed, if you have any suggestions or find any bu
 
 ## Credits 
 apollo147 and staxl4 made the bot.
+
 Thank you to peterpeterp who made the flowr discord server bot, as this one is heavily inspired by it.
