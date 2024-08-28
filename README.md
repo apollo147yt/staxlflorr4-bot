@@ -7,7 +7,9 @@ This bot is taking a while.
 This project started of as a complete joke and has turned into something decent.
 
 ## Help us please
-If you have any suggestions or find any bugs, please DM one of us with the usernames below
+As this bot is still being developed, if you have any suggestions or find any bugs (there will be), please DM one of us on discord with the usernames below
 
 ![Static Badge](https://img.shields.io/badge/Discord-_apollo147-blue?style=plastic&labelColor=%23000000)
 ![Static Badge](https://img.shields.io/badge/Discord-_staxlflorr-blue?style=plastic&labelColor=%23000000)
+
+## Credits 
