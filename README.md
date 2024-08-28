@@ -1,4 +1,5 @@
-![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/staxl4/staxlflorr4-bot/total?style=plastic)
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/staxl4/staxlflorr4-bot/total?style=plastic&link=https%3A%2F%2Fgithub.com%2Fstaxl4%2Fstaxlflorr4-bot.git)
+
 
 
 
