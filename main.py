@@ -206,6 +206,10 @@ async def sac(ctx, amount: int):
 
     save_db()
 
+    except Exception as e:
+        print(f"Error in !spin command: {e}")
+        await ctx.send("My goofy ass did an oopsy, ping a bot coder to fix it.")
+
 @bot.command()
 async def endsac(ctx):
     if not ctx.author.guild_permissions.administrator:
@@ -287,6 +291,10 @@ async def pay(ctx, user: discord.User, amount: int):
 
     save_db()
 
+    except Exception as e:
+        print(f"Error in !spin command: {e}")
+        await ctx.send("My goofy ass did an oopsy, ping a bot coder to fix it.")
+
 @bot.command()
 async def assign_role(ctx, user: discord.User, *, role: discord.Role):
     if ctx.author.id != bot.owner_id:
@@ -307,19 +315,17 @@ async def remove_role(ctx, user: discord.User, *, role: discord.Role):
 
 @bot.command()
 async def help1(ctx):
-    help_text = """
-    **Commands:**
-    `!spin` - Spin to earn credits based on rarity and luck.
-    `!sac <amount>` - Sacrifice credits to increase luck.
-    `!endsac` - End the current sacrifice.
-    `!setcredits <user> <amount>` - Set credits for a user (admin only).
-    `!addcredits <user> <amount>` - Add credits to a user's balance (admin only).
-    `!removecredits <user> <amount>` - Remove credits from a user's balance (admin only).
-    `!pay <user> <amount>` - Transfer credits to another user.
-    `!assign_role <user> <role>` - Assign a role to a user (owner only).
-    `!remove_role <user> <role>` - Remove a role from a user (owner only).
-    """
-    await ctx.send(help_text)
+    embed = discord.Embed(title="Bot Commands", color=0x00ff00)
+    embed.add_field(name="!spin", value="Spin to earn rewards based on rarity.", inline=False)
+    embed.add_field(name="!sac", value="Sacrifice credits to increase your luck.", inline=False)
+    embed.add_field(name="!setcredits [user] [amount]", value="Set a user's credits to a specific amount. (Admin only)", inline=False)
+    embed.add_field(name="!addcredits [user] [amount]", value="Add a specific amount of credits to a user's balance. (Admin only)", inline=False)
+    embed.add_field(name="!pay [user] [amount]", value="Pay another user a specific amount of credits.", inline=False)
+    embed.add_field(name="!credits [user (optional)]", value="Check your or another user's credit balance.", inline=False)
+    embed.add_field(name="!assign_role [role]", value="Assign a specific role to yourself. (Owner only)", inline=False)
+    embed.add_field(name="!remove_role [role]", value="Remove a specific role from yourself. (Owner only)", inline=False)
+    embed.add_field(name="!endsac", value="End the current sacrifice session. (Admin only)", inline=False)
+    await ctx.send(embed=embed)
 
 @bot.command()
 async def rig(ctx, rarity: int):
