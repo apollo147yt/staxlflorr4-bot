@@ -10,3 +10,5 @@ This project started of as a complete joke and has turned into something decent.
 
 ## Help us please
 If you have any suggestions or find any bugs, please dm us with the usernames at the top of the page :)
+![Static Badge](https://img.shields.io/badge/Discord-_apollo147-blue?style=plastic&labelColor=%23000000)
+![Static Badge](https://img.shields.io/badge/Discord-_staxlflorr-blue?style=plastic&labelColor=%23000000)
