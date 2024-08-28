@@ -1,5 +1,7 @@
 ![Static Badge](https://img.shields.io/badge/Discord-_apollo147-blue?style=plastic&labelColor=%23000000)
 ![Static Badge](https://img.shields.io/badge/Discord-_staxlflorr-blue?style=plastic&labelColor=%23000000)
+                                                                                                              ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/staxl4/staxlflorr4-bot/total?style=plastic)
+
 
 
 ## Just some information
