@@ -1,30 +1,8 @@
-import asyncio
 import discord
 from discord.ext import commands
 import random
 import json
 import os
-from discord.ui import Button, View
-
-class MarketAddView(View):
-    def __init__(self):
-        super().__init__()
-        self.add_item(Button(label='Confirm', style=discord.ButtonStyle.green, custom_id='confirm_add'))
-
-    async def on_button_click(self, interaction: discord.Interaction):
-        if interaction.custom_id == 'confirm_add':
-            # Send the follow-up interaction for market item details
-            await interaction.response.send_message("Please provide the following details:", ephemeral=True)
-
-            # Send a message with fields for the user to fill out
-            await interaction.followup.send(
-                embed=discord.Embed(title="Market Item Setup", description="Fill out the details below:"),
-                components=[
-                    discord.ui.Modal(label="Name of Service", style=discord.TextStyle.short, custom_id="service_name"),
-                    discord.ui.Modal(label="Description of Service", style=discord.TextStyle.paragraph, custom_id="service_description"),
-                    discord.ui.Modal(label="Price of Service (minimum 10k)", style=discord.TextStyle.short, custom_id="service_price")
-                ]
-            )
 
 # Default data structure
 default_db = {
@@ -35,15 +13,16 @@ default_db = {
     "sac_spins": 0,
     "spins_count": {},
     "sac_spins_limit": 10,
-    "custom_luck_multiplier": 1
+    "custom_luck_multiplier": 1,
+    "market": {}
 }
 
-# Check if the file exists
+# Ensure the database file exists
 if not os.path.exists("db.json"):
     with open("db.json", "w") as f:
         json.dump(default_db, f, indent=4)
 
-# Load the file
+# Load the database file
 with open("db.json", "r") as f:
     db = json.load(f)
 
@@ -68,9 +47,10 @@ def get_user_credits(user_id):
 def set_user_credits(user_id, credits):
     db["Social_credits"][str(user_id)] = credits
 
-# Setting up bot with command prefix and intents
+# Initialize bot with command prefix and intents
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # Rarity names, credits, and colors
@@ -120,83 +100,17 @@ mobMulti = [
     1, 1, 1.5, 1, 1, 1, 1.5, 1, 3, 10, 1000, -666
 ]
 
-# Add new data structures for market system
-if 'market' not in db:
-    db['market'] = {}
-    save_db()
-
-# Function to check if a user is the creator of a market item
-def is_market_creator(user_id, market_id):
-    return db['market'].get(market_id, {}).get('creator') == str(user_id)
-
 # Event when bot is ready
 @bot.event
 async def on_ready():
     print(f'We have logged in as {bot.user}')
 
-@bot.command()
-async def market(ctx, action: str):
-    if action == 'add':
-        # Create the confirmation embed
-        embed = discord.Embed(
-            title="Add Market Item",
-            description="This costs 10k credits + tax. Are you sure you want to proceed?",
-            color=discord.Color.blue()
-        )
+    @bot.event
+    async def on_command_error(ctx, error):
+        print(f"Error occurred: {error}")
+        await ctx.send("An error occurred. Please check the bot logs for details.")
 
-        # Create and send the confirmation message with a button
-        view = discord.ui.View()
-        view.add_item(discord.ui.Button(label='Confirm', style=discord.ButtonStyle.green, custom_id='confirm_add'))
-        await ctx.send(embed=embed, view=view)
-
-    elif action.isdigit():
-        page = int(action)
-        items_per_page = 5
-        market_items = list(db['market'].items())
-        start = (page - 1) * items_per_page
-        end = start + items_per_page
-        page_items = market_items[start:end]
-
-        if not page_items:
-            await ctx.send(f"No items found on page {page}.")
-            return
-
-        embed = discord.Embed(
-            title="Market Items",
-            description=f"Page {page}",
-            color=discord.Color.green()
-        )
-
-        for item_id, item in page_items:
-            embed.add_field(
-                name=item['name'],
-                value=f"Description: {item['description']}\nPrice: {item['price']} credits\nCreated by: <@{item['creator']}>",
-                inline=False
-            )
-
-        await ctx.send(embed=embed)
-
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def addmarket(ctx):
-    await ctx.send("Please fill out the form to add a market item.")
-    await ctx.send("Use the following command to proceed: `!market add`.")
-
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def delmarket(ctx, market_id: str):
-    user_id = ctx.author.id
-    if not is_market_creator(user_id, market_id):
-        await ctx.send("You are not the creator of this market item.")
-        return
-
-    if market_id in db['market']:
-        del db['market'][market_id]
-        save_db()
-        await ctx.send(f"Market item {market_id} has been removed.")
-    else:
-        await ctx.send(f"No market item found with ID {market_id}.")
-
+# Spin command
 @bot.command()
 async def spin(ctx):
     if ctx.channel.name != 'spin':
@@ -218,9 +132,50 @@ async def spin(ctx):
         randomValue = random.random()
         rng = randomValue / (((luck_multiplier - 1) * 0.7) + 1)
 
-        # Determine rarity based on the adjusted RNG
-        thresholds = [0.55, 0.35, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.0025, 0.001, 0.00044, 0.00014, 0.00004, 0.00001, 0]
-        rarity = next((i for i, threshold in enumerate(thresholds) if rng < threshold), len(thresholds) - 1)
+        rarity = 0
+
+        if rng < 0.55:
+            rarity+=1
+        if rng < 0.35:
+            rarity+=1
+        if rng < 0.2:
+            rarity+=1
+        if rng < 0.1:
+            rarity+=1
+        if rng < 0.05:
+            rarity+=1
+        if rng < 0.02:
+            rarity+=1
+        if rng < 0.01:
+            rarity+=1
+        if rng < 0.005:
+            rarity+=1
+        if rng < 0.0025:
+            rarity+=1
+        if rng < 0.001:
+            rarity+=1
+        if rng < 0.00044:
+            rarity+=1
+        if rng < 0.00014:
+            rarity+=1
+        if rng < 0.00004:
+            rarity+=1
+        if rng < 0.00001:
+            rarity+=1
+        if rng < 0.000004:
+            rarity+=1
+        if rng < 0.000001:
+            rarity+=1
+        if rng < 0.0000004:
+            rarity+=1
+        if rng < 0.0000001:
+            rarity+=1
+        if rng < 0.00000004:
+            rarity+=1
+        if rng < 0.00000001:
+            rarity+=1
+        if rng == 0:
+            rarity+=1
 
         # Determine mob type and multiplier
         mob_index = random.randint(0, len(mobType) - 1)
@@ -266,8 +221,101 @@ async def spin(ctx):
         save_db()
 
     except Exception as e:
-        print(f"Error in !spin command: {e}")
-        await ctx.send("An error occurred while processing the spin.")
+        await ctx.send(f"An error occurred: {e}")
+
+# Market Add Modal class (for adding market items)
+class MarketAddModal(discord.ui.Modal):
+    def __init__(self, user_id):
+        super().__init__(title="Add Market Item")
+        self.user_id = user_id
+        # Add TextInputs to the Modal
+        self.add_item(discord.ui.TextInput(label="Name of Service", placeholder="Enter the name of the service", custom_id="name_input", required=True))
+        self.add_item(discord.ui.TextInput(label="Description of Service", placeholder="Enter a description", custom_id="description_input", required=True))
+        self.add_item(discord.ui.TextInput(label="Price of Service (min 10k)", placeholder="Enter the price", custom_id="price_input", required=True))
+
+    async def callback(self, interaction: discord.Interaction):
+        # Retrieve TextInput values
+        name = self.children[0].value
+        description = self.children[1].value
+        price_str = self.children[2].value
+
+        try:
+            price = int(price_str)
+            if price < 10000:
+                await interaction.response.send_message("Price must be at least 10,000 credits.", ephemeral=True)
+                return
+        except ValueError:
+            await interaction.response.send_message("Invalid price format.", ephemeral=True)
+            return
+        
+        item_id = len(db["market"]) + 1
+        db["market"][str(item_id)] = {
+            "owner": str(self.user_id),
+            "name": name,
+            "description": description,
+            "price": price
+        }
+        save_db()
+        await interaction.response.send_message(f"Market item '{name}' added successfully.", ephemeral=True)
+
+# Button to trigger the modal
+class MarketAddButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(label="Add Market Item", style=discord.ButtonStyle.blurple)
+
+    async def callback(self, interaction: discord.Interaction):
+        # Show the modal when the button is clicked
+        modal = MarketAddModal(interaction.user.id)
+        await interaction.response.send_modal(modal)
+
+# Add Market Command
+@bot.command()
+async def addmarket(ctx):
+    # Send a message with a button to trigger the modal
+    view = discord.ui.View()
+    view.add_item(MarketAddButton())
+    await ctx.send("Click the button below to add a market item.", view=view)
+
+# Market Command
+@bot.command()
+async def market(ctx, page: int = 1):
+    items_per_page = 5
+    start_index = (page - 1) * items_per_page
+    end_index = start_index + items_per_page
+    
+    market_items = list(db["market"].values())[start_index:end_index]
+    if not market_items:
+        await ctx.send("No items found on this page.")
+        return
+    
+    embed = discord.Embed(title=f"Market - Page {page}", color=0x00ff00)
+    for item in market_items:
+        embed.add_field(
+            name=item["name"],
+            value=f"**Description:** {item['description']}\n**Price:** {item['price']} credits\n**Owner:** <@{item['owner']}>",
+            inline=False
+        )
+    
+    await ctx.send(embed=embed)
+
+# Remove Market Command
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def delmarket(ctx, item_id: int):
+    item_id_str = str(item_id)
+    item = db["market"].get(item_id_str)
+    
+    if not item:
+        await ctx.send("Item not found.")
+        return
+    
+    if item["owner"] != str(ctx.author.id):
+        await ctx.send("You are not the owner of this item.")
+        return
+    
+    del db["market"][item_id_str]
+    save_db()
+    await ctx.send(f"Market item '{item['name']}' removed successfully.")
 
 @bot.command()
 @commands.is_owner()
@@ -275,11 +323,15 @@ async def assign_role(ctx, user: discord.Member, role: discord.Role):
     await user.add_roles(role)
     await ctx.send(f"Assigned {role.name} to {user.name}.")
 
+    save_db()
+
 @bot.command()
 @commands.is_owner()
 async def remove_role(ctx, user: discord.Member, role: discord.Role):
     await user.remove_roles(role)
     await ctx.send(f"Removed {role.name} from {user.name}.")
+
+    save_db()
 
 @bot.command()
 async def credit(ctx):
@@ -292,6 +344,9 @@ async def credit(ctx):
         embed.add_field(name="Your Credits", value=f"You have {credits} credits.", inline=False)
 
         await ctx.send(embed=embed)
+
+        save_db()
+
     except Exception as e:
         print(f"Error in !credit command: {e}")
         await ctx.send("An error occurred while retrieving your credits.")
@@ -306,8 +361,12 @@ async def addcredits(ctx, user: discord.Member, amount: int):
     user_id = user.id
     ensure_user_data(user_id)
     current_credits = get_user_credits(user_id)
-    set_user_credits(user_id, current_credits + amount)
-    await ctx.send(f"Added {amount} credits to {user.name}.")
+    new_credits = current_credits + amount
+    set_user_credits(user_id, new_credits)
+
+    await ctx.send(f"Added {amount} credits to {user.mention}. They now have {new_credits} credits.")
+    
+    save_db()
 
 @bot.command()
 @commands.has_permissions(administrator=True)
@@ -319,12 +378,17 @@ async def removecredits(ctx, user: discord.Member, amount: int):
     user_id = user.id
     ensure_user_data(user_id)
     current_credits = get_user_credits(user_id)
-    if current_credits < amount:
-        await ctx.send(f"{user.name} does not have enough credits.")
+
+    if amount > current_credits:
+        await ctx.send(f"{user.mention} does not have enough credits to remove {amount}. They currently have {current_credits} credits.")
         return
 
-    set_user_credits(user_id, current_credits - amount)
-    await ctx.send(f"Removed {amount} credits from {user.name}.")
+    new_credits = current_credits - amount
+    set_user_credits(user_id, new_credits)
+
+    await ctx.send(f"Removed {amount} credits from {user.mention}. They now have {new_credits} credits.")
+    
+    save_db()
 
 @bot.command()
 @commands.has_permissions(administrator=True)
@@ -337,6 +401,8 @@ async def setcredits(ctx, user: discord.Member, amount: int):
     ensure_user_data(user_id)
     set_user_credits(user_id, amount)
     await ctx.send(f"Set {user.name}'s credits to {amount}.")
+
+    save_db()
 
 @bot.command()
 @commands.has_permissions(administrator=True)
@@ -352,6 +418,8 @@ async def endsac(ctx):
     db["sac_limit_reached"] = False
     await ctx.send("Sacrifice ended.")
 
+    save_db()
+
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def unsac(ctx):
@@ -361,6 +429,7 @@ async def unsac(ctx):
     db["sac_spins"] = 0
     db["sac_limit_reached"] = False
     await ctx.send("Sacrifice has been disabled.")
+    save_db()
 
 @bot.command()
 @commands.has_permissions(administrator=True)
@@ -376,6 +445,8 @@ async def rig(ctx, rarity: int):
     db["rigged_result"] = rarity
     await ctx.send(f"Set rigged result to {rarityNames[rarity]}.")
 
+    save_db()
+
 @bot.command()
 async def leaderboard(ctx):
     sorted_users = sorted(db["Social_credits"].items(), key=lambda x: x[1], reverse=True)
@@ -388,6 +459,8 @@ async def leaderboard(ctx):
         embed.add_field(name=f"{i + 1}. {username}", value=f"{credits} credits", inline=False)
 
     await ctx.send(embed=embed)
+
+    save_db()
 
 @bot.command()
 async def pay(ctx, user: discord.Member, amount: int):
@@ -475,9 +548,8 @@ async def help1(ctx):
     embed.add_field(name="!pay <user> <amount>", value="Pay credits to another user with a 10% tax.", inline=False)
     embed.add_field(name="!sac <amount>", value="Sacrifice credits to increase your luck boost.", inline=False)
     embed.add_field(name="!leaderboard", value="Show the top 10 users based on credits.", inline=False)
-    embed.add_field(name="!market [page]", value="Access the market", inline=False)
-    embed.add_field(name="!addmarket", value="Add to the market", inline=False)
-    embed.add_field(name="!delmarket [market id]", value="Delete your created market", inline=False)
     await ctx.send(embed=embed)
 
-bot.run('YOUR_BOT_TOKEN')
+    save_db()
+
+bot.run('your-bot-token')
