@@ -26,3 +26,5 @@ As this bot is still being developed, if you have any suggestions or find any bu
 ![Static Badge](https://img.shields.io/badge/Discord-_staxlflorr-blue?style=plastic&labelColor=%23000000)
 
 ## Credits 
+apollo147 and staxl4 made the bot
+Thank you to 
