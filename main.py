@@ -11,7 +11,7 @@ default_db = {
     "sac_active": False,
     "sac_amount": 0,
     "sac_spins": 0,
-    "spins_count": {},
+    "spins_count": {},  
     "sac_spins_limit": 10,
     "custom_luck_multiplier": 1,
     "market": {}
@@ -97,7 +97,7 @@ mobType = [
 ]
 mobMulti = [
     1, 1.5, 1, 1, 1, 1, 1, 1.5, 1, 1.5, 1, 1, -1, -2, 1, 1, 1, 1.5, 2, 1, 1.5, 1.5, 1, 1.5, 5, 
-    1, 1, 1.5, 1, 1, 1, 1.5, 1, 3, 10, 1000, -666
+    1, 1, 1.5, 1, 1, 1, 1.5, 1, 3, 10, 100, -666
 ]
 
 # Event when bot is ready
@@ -210,12 +210,12 @@ async def spin(ctx):
                     db["sac_active"] = False
                     db["sac_spins"] = 0
                 # Send the result embed even if the limit is reached
-                await ctx.send(embed=embed)
+                await ctx.reply(embed=embed, mention_author=True)
             else:
                 db["sac_spins"] += 1
-                await ctx.send(embed=embed)
+                await ctx.reply(embed=embed, mention_author=True)
         else:
-            await ctx.send(embed=embed)
+            await ctx.reply(embed=embed, mention_author=True)
             db["spins_count"][str(user_id)] += 1
 
         save_db()
@@ -223,18 +223,15 @@ async def spin(ctx):
     except Exception as e:
         await ctx.send(f"An error occurred: {e}")
 
-# Market Add Modal class (for adding market items)
 class MarketAddModal(discord.ui.Modal):
     def __init__(self, user_id):
         super().__init__(title="Add Market Item")
         self.user_id = user_id
-        # Add TextInputs to the Modal
         self.add_item(discord.ui.TextInput(label="Name of Service", placeholder="Enter the name of the service", custom_id="name_input", required=True))
         self.add_item(discord.ui.TextInput(label="Description of Service", placeholder="Enter a description", custom_id="description_input", required=True))
         self.add_item(discord.ui.TextInput(label="Price of Service (min 10k)", placeholder="Enter the price", custom_id="price_input", required=True))
 
     async def callback(self, interaction: discord.Interaction):
-        # Retrieve TextInput values
         name = self.children[0].value
         description = self.children[1].value
         price_str = self.children[2].value
@@ -245,33 +242,37 @@ class MarketAddModal(discord.ui.Modal):
                 await interaction.response.send_message("Price must be at least 10,000 credits.", ephemeral=True)
                 return
         except ValueError:
-            await interaction.response.send_message("Invalid price format.", ephemeral=True)
+            await interaction.response.send_message("Invalid price format. Please enter a valid integer.", ephemeral=True)
             return
         
-        item_id = len(db["market"]) + 1
-        db["market"][str(item_id)] = {
-            "owner": str(self.user_id),
-            "name": name,
-            "description": description,
-            "price": price
-        }
-        save_db()
-        await interaction.response.send_message(f"Market item '{name}' added successfully.", ephemeral=True)
+        try:
+            if "market" not in db:
+                db["market"] = {}
+            item_id = len(db["market"]) + 1
+            db["market"][str(item_id)] = {
+                "owner": str(self.user_id),
+                "name": name,
+                "description": description,
+                "price": price
+            }
+            save_db()
+            await interaction.response.send_message(f"Market item '{name}' added successfully.", ephemeral=True)
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            await interaction.response.send_message("An error occurred while adding the market item. Please try again later.", ephemeral=True)
 
-# Button to trigger the modal
+# MarketAddButton class
 class MarketAddButton(discord.ui.Button):
     def __init__(self):
         super().__init__(label="Add Market Item", style=discord.ButtonStyle.blurple)
 
     async def callback(self, interaction: discord.Interaction):
-        # Show the modal when the button is clicked
         modal = MarketAddModal(interaction.user.id)
         await interaction.response.send_modal(modal)
 
 # Add Market Command
 @bot.command()
 async def addmarket(ctx):
-    # Send a message with a button to trigger the modal
     view = discord.ui.View()
     view.add_item(MarketAddButton())
     await ctx.send("Click the button below to add a market item.", view=view)
@@ -334,22 +335,25 @@ async def remove_role(ctx, user: discord.Member, role: discord.Role):
     save_db()
 
 @bot.command()
-async def credit(ctx):
+async def credit(ctx, user: discord.Member = None):
+    if user is None:
+        user = ctx.author
     try:
-        user_id = ctx.author.id
+        user_id = user.id
         ensure_user_data(user_id)
-        credits = get_user_credits(user_id)
+        current_credits = get_user_credits(user_id)
 
-        embed = discord.Embed(title="Credit Balance", color=0x00ff00)
-        embed.add_field(name="Your Credits", value=f"You have {credits} credits.", inline=False)
+        embed = discord.Embed(title="Social Credits!", color=0x00ff00)
+        embed.add_field(name="Credits", value=f"{user.mention} has {current_credits} credits!", inline=False)
 
-        await ctx.send(embed=embed)
+        await ctx.reply(embed=embed, mention_author=True)
 
+        # Ensure any changes are saved
         save_db()
 
     except Exception as e:
         print(f"Error in !credit command: {e}")
-        await ctx.send("An error occurred while retrieving your credits.")
+        await ctx.send("An error occurred while retrieving the credits.")
 
 @bot.command()
 @commands.has_permissions(administrator=True)
