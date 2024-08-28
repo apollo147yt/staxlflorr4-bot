@@ -1,4 +1,6 @@
-![Static Badge](https://img.shields.io/badge/Discord-_apollo147-blue?labelColor=%23000000)
+![Static Badge](https://img.shields.io/badge/Discord-_apollo147-blue?style=plastic&labelColor=%23000000)
+![Static Badge](https://img.shields.io/badge/Discord-_staxlflorr-blue?style=plastic&labelColor=%23000000)
+
 
 ## Just some information
 This bot is taking a while.
