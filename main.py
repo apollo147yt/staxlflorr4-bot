@@ -1,8 +1,30 @@
+import asyncio
 import discord
 from discord.ext import commands
 import random
 import json
 import os
+from discord.ui import Button, View
+
+class MarketAddView(View):
+    def __init__(self):
+        super().__init__()
+        self.add_item(Button(label='Confirm', style=discord.ButtonStyle.green, custom_id='confirm_add'))
+
+    async def on_button_click(self, interaction: discord.Interaction):
+        if interaction.custom_id == 'confirm_add':
+            # Send the follow-up interaction for market item details
+            await interaction.response.send_message("Please provide the following details:", ephemeral=True)
+
+            # Send a message with fields for the user to fill out
+            await interaction.followup.send(
+                embed=discord.Embed(title="Market Item Setup", description="Fill out the details below:"),
+                components=[
+                    discord.ui.Modal(label="Name of Service", style=discord.TextStyle.short, custom_id="service_name"),
+                    discord.ui.Modal(label="Description of Service", style=discord.TextStyle.paragraph, custom_id="service_description"),
+                    discord.ui.Modal(label="Price of Service (minimum 10k)", style=discord.TextStyle.short, custom_id="service_price")
+                ]
+            )
 
 # Default data structure
 default_db = {
@@ -98,10 +120,82 @@ mobMulti = [
     1, 1, 1.5, 1, 1, 1, 1.5, 1, 3, 10, 1000, -666
 ]
 
+# Add new data structures for market system
+if 'market' not in db:
+    db['market'] = {}
+    save_db()
+
+# Function to check if a user is the creator of a market item
+def is_market_creator(user_id, market_id):
+    return db['market'].get(market_id, {}).get('creator') == str(user_id)
+
 # Event when bot is ready
 @bot.event
 async def on_ready():
     print(f'We have logged in as {bot.user}')
+
+@bot.command()
+async def market(ctx, action: str):
+    if action == 'add':
+        # Create the confirmation embed
+        embed = discord.Embed(
+            title="Add Market Item",
+            description="This costs 10k credits + tax. Are you sure you want to proceed?",
+            color=discord.Color.blue()
+        )
+
+        # Create and send the confirmation message with a button
+        view = discord.ui.View()
+        view.add_item(discord.ui.Button(label='Confirm', style=discord.ButtonStyle.green, custom_id='confirm_add'))
+        await ctx.send(embed=embed, view=view)
+
+    elif action.isdigit():
+        page = int(action)
+        items_per_page = 5
+        market_items = list(db['market'].items())
+        start = (page - 1) * items_per_page
+        end = start + items_per_page
+        page_items = market_items[start:end]
+
+        if not page_items:
+            await ctx.send(f"No items found on page {page}.")
+            return
+
+        embed = discord.Embed(
+            title="Market Items",
+            description=f"Page {page}",
+            color=discord.Color.green()
+        )
+
+        for item_id, item in page_items:
+            embed.add_field(
+                name=item['name'],
+                value=f"Description: {item['description']}\nPrice: {item['price']} credits\nCreated by: <@{item['creator']}>",
+                inline=False
+            )
+
+        await ctx.send(embed=embed)
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def addmarket(ctx):
+    await ctx.send("Please fill out the form to add a market item.")
+    await ctx.send("Use the following command to proceed: `!market add`.")
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def delmarket(ctx, market_id: str):
+    user_id = ctx.author.id
+    if not is_market_creator(user_id, market_id):
+        await ctx.send("You are not the creator of this market item.")
+        return
+
+    if market_id in db['market']:
+        del db['market'][market_id]
+        save_db()
+        await ctx.send(f"Market item {market_id} has been removed.")
+    else:
+        await ctx.send(f"No market item found with ID {market_id}.")
 
 @bot.command()
 async def spin(ctx):
@@ -173,207 +267,217 @@ async def spin(ctx):
 
     except Exception as e:
         print(f"Error in !spin command: {e}")
-        await ctx.send("My goofy ass did an oopsy, ping a bot coder to fix it.")
+        await ctx.send("An error occurred while processing the spin.")
 
 @bot.command()
-async def sac(ctx, amount: int):
-    try:
-        user_id = ctx.author.id
-        ensure_user_data(user_id)
-        
-        current_credits = get_user_credits(user_id)
-        
-        # Calculate the 10% tax
-        tax = int(amount * 0.10)
-        net_amount = amount - tax
-
-        if amount > current_credits:
-            await ctx.send("Nuh uh, try again. You don't have enough credits (there is a 10% tax)")
-            return
-
-        # Deduct the net amount (after tax) from the user's credits
-        new_credits = current_credits - amount
-        set_user_credits(user_id, new_credits)
-
-        db["sac_active"] = True
-        db["sac_amount"] = net_amount  # Use net amount for the sacrifice
-        db["sac_spins"] = 0
-        db["sac_limit_reached"] = False
-
-        # Calculate luck multiplier based on net amount
-        luck_multiplier = round(max(0.207125 * (2.34915 * net_amount + 463.458) ** 0.5 - 4.48083, 1), 1)
-        
-        embed = discord.Embed(color=0xFFFF00)
-        embed.add_field(name="The Flowr gods heed your sacrifice...", value="\u200b", inline=False)
-        embed.add_field(name=f"A {luck_multiplier}x luck boost has been activated!", value="\u200b", inline=False)
-        embed.add_field(name="Sacrificed Social Credit", value=f"{net_amount} (after 10% tax of {tax})", inline=False)
-        embed.add_field(name="Successful Sacrifice", value=f"{ctx.author.mention} sacrificed {amount} credits!", inline=False)
-
-        await ctx.send(embed=embed)
-
-        save_db()
-    
-    except Exception as e:
-        print(f"Error in !sac command: {e}")
-        await ctx.send("My goofy ass did an oopsy, ping a bot coder to fix it.")
-
-@bot.command()
-async def endsac(ctx):
-    if not ctx.author.guild_permissions.administrator:
-        await ctx.send("You need to be an admin to use this command.")
-        return
-
-    if not db.get("sac_active", False):
-        await ctx.send("No active sacrifice.")
-        return
-
-    db["sac_active"] = False
-    db["sac_amount"] = 0
-    db["sac_spins"] = 0
-    db["sac_limit_reached"] = False
-    await ctx.send("Sacrifice ended.")
-
-    save_db()
-
-@bot.command()
-async def setcredits(ctx, user: discord.User, amount: int):
-    if not ctx.author.guild_permissions.administrator:
-        await ctx.send("You need to be an admin to use this command.")
-        return
-
-    set_user_credits(user.id, amount)
-    await ctx.send(f"Set {user.name}'s credits to {amount}.")
-
-    save_db()
-
-@bot.command()
-async def addcredits(ctx, user: discord.User, amount: int):
-    if not ctx.author.guild_permissions.administrator:
-        await ctx.send("You need to be an admin to use this command.")
-        return
-
-    current_credits = get_user_credits(user.id)
-    new_credits = current_credits + amount
-    set_user_credits(user.id, new_credits)
-    await ctx.send(f"Added {amount} credits to {user.name}.")
-
-    save_db()
-
-@bot.command()
-async def removecredits(ctx, user: discord.User, amount: int):
-    if not ctx.author.guild_permissions.administrator:
-        await ctx.send("You need to be an admin to use this command.")
-        return
-
-    current_credits = get_user_credits(user.id)
-    new_credits = max(current_credits - amount, 0)
-    set_user_credits(user.id, new_credits)
-    await ctx.send(f"Removed {amount} credits from {user.name}.")
-
-    save_db()
-
-@bot.command()
-async def pay(ctx, user: discord.User, amount: int):
-    try:
-        sender_id = ctx.author.id
-        recipient_id = user.id
-
-        if amount <= 0:
-            await ctx.send("Amount must be greater than 0.")
-            return
-
-        ensure_user_data(sender_id)
-        ensure_user_data(recipient_id)
-
-        # Calculate the 10% tax
-        tax = int(amount * 0.10)
-        net_amount = amount - tax
-
-        sender_credits = get_user_credits(sender_id)
-        if sender_credits < amount:
-            await ctx.send("You don't have enough credits to make this payment (there is a 10% tax)")
-            return
-
-        # Deduct the full amount from the sender's credits
-        set_user_credits(sender_id, sender_credits - amount)
-        # Add the net amount (after tax) to the recipient's credits
-        set_user_credits(recipient_id, get_user_credits(recipient_id) + net_amount)
-
-        embed = discord.Embed(color=0xFFFF00)
-        embed.add_field(name="Success!", value=f"{ctx.author.mention} has given {user.mention} {net_amount} credits! (after 10% tax of {tax})", inline=False)
-        await ctx.send(embed=embed)
-
-        save_db()
-
-    except Exception as e:
-        print(f"Error in !pay command: {e}")
-        await ctx.send("My goofy ass did an oopsy, ping a bot coder to fix it.")
-
-@bot.command()
-async def assign_role(ctx, user: discord.User, *, role: discord.Role):
-    if ctx.author.id != bot.owner_id:
-        await ctx.send("Only the bot owner can use this command.")
-        return
-
+@commands.is_owner()
+async def assign_role(ctx, user: discord.Member, role: discord.Role):
     await user.add_roles(role)
     await ctx.send(f"Assigned {role.name} to {user.name}.")
 
 @bot.command()
-async def remove_role(ctx, user: discord.User, *, role: discord.Role):
-    if ctx.author.id != bot.owner_id:
-        await ctx.send("Only the bot owner can use this command.")
-        return
-
+@commands.is_owner()
+async def remove_role(ctx, user: discord.Member, role: discord.Role):
     await user.remove_roles(role)
     await ctx.send(f"Removed {role.name} from {user.name}.")
 
 @bot.command()
-async def help1(ctx):
-    embed = discord.Embed(title="Bot Commands", color=0x00ff00)
-    embed.add_field(name="!spin", value="Spin to earn rewards based on rarity.", inline=False)
-    embed.add_field(name="!sac", value="Sacrifice credits to increase your luck.", inline=False)
-    embed.add_field(name="!setcredits [user] [amount]", value="Set a user's credits to a specific amount. (Admin only)", inline=False)
-    embed.add_field(name="!addcredits [user] [amount]", value="Add a specific amount of credits to a user's balance. (Admin only)", inline=False)
-    embed.add_field(name="!pay [user] [amount]", value="Pay another user a specific amount of credits.", inline=False)
-    embed.add_field(name="!credits [user (optional)]", value="Check your or another user's credit balance.", inline=False)
-    embed.add_field(name="!assign_role [role]", value="Assign a specific role to yourself. (Owner only)", inline=False)
-    embed.add_field(name="!remove_role [role]", value="Remove a specific role from yourself. (Owner only)", inline=False)
-    embed.add_field(name="!endsac", value="End the current sacrifice session. (Admin only)", inline=False)
-    await ctx.send(embed=embed)
+async def credit(ctx):
+    try:
+        user_id = ctx.author.id
+        ensure_user_data(user_id)
+        credits = get_user_credits(user_id)
+
+        embed = discord.Embed(title="Credit Balance", color=0x00ff00)
+        embed.add_field(name="Your Credits", value=f"You have {credits} credits.", inline=False)
+
+        await ctx.send(embed=embed)
+    except Exception as e:
+        print(f"Error in !credit command: {e}")
+        await ctx.send("An error occurred while retrieving your credits.")
 
 @bot.command()
+@commands.has_permissions(administrator=True)
+async def addcredits(ctx, user: discord.Member, amount: int):
+    if amount < 0:
+        await ctx.send("Cannot add negative credits.")
+        return
+
+    user_id = user.id
+    ensure_user_data(user_id)
+    current_credits = get_user_credits(user_id)
+    set_user_credits(user_id, current_credits + amount)
+    await ctx.send(f"Added {amount} credits to {user.name}.")
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def removecredits(ctx, user: discord.Member, amount: int):
+    if amount < 0:
+        await ctx.send("Cannot remove negative credits.")
+        return
+
+    user_id = user.id
+    ensure_user_data(user_id)
+    current_credits = get_user_credits(user_id)
+    if current_credits < amount:
+        await ctx.send(f"{user.name} does not have enough credits.")
+        return
+
+    set_user_credits(user_id, current_credits - amount)
+    await ctx.send(f"Removed {amount} credits from {user.name}.")
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def setcredits(ctx, user: discord.Member, amount: int):
+    if amount < 0:
+        await ctx.send("Cannot set negative credits.")
+        return
+
+    user_id = user.id
+    ensure_user_data(user_id)
+    set_user_credits(user_id, amount)
+    await ctx.send(f"Set {user.name}'s credits to {amount}.")
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def endsac(ctx):
+    if not db.get("sac_active", False):
+        await ctx.send("No sacrifice is currently active.")
+        return
+
+    db["custom_luck_multiplier"] = 1
+    db["sac_amount"] = 0
+    db["sac_active"] = False
+    db["sac_spins"] = 0
+    db["sac_limit_reached"] = False
+    await ctx.send("Sacrifice ended.")
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def unsac(ctx):
+    db["sac_active"] = False
+    db["sac_amount"] = 0
+    db["custom_luck_multiplier"] = 1
+    db["sac_spins"] = 0
+    db["sac_limit_reached"] = False
+    await ctx.send("Sacrifice has been disabled.")
+
+@bot.command()
+@commands.has_permissions(administrator=True)
 async def rig(ctx, rarity: int):
-    if not ctx.author.guild_permissions.administrator:
-        await ctx.send("You need to be an admin to use this command.")
-        return
-
     if rarity < 1 or rarity >= len(rarityNames):
-        await ctx.send("Invalid rarity number.")
+        await ctx.send("Invalid rarity level.")
         return
 
-    # Simulate rigged spin with the given rarity
     user_id = ctx.author.id
     ensure_user_data(user_id)
 
-    final_credits = rarityCredits[rarity - 1]  # Indexing starts from 0
-    mob_index = random.randint(0, len(mobType) - 1)
-    mob_name = mobType[mob_index]
-    mob_multiplier = mobMulti[mob_index]
+    # Set rigged result
+    db["rigged_result"] = rarity
+    await ctx.send(f"Set rigged result to {rarityNames[rarity]}.")
 
-    current_credits = get_user_credits(user_id)
-    new_credits = current_credits + final_credits
-    set_user_credits(user_id, new_credits)
+@bot.command()
+async def leaderboard(ctx):
+    sorted_users = sorted(db["Social_credits"].items(), key=lambda x: x[1], reverse=True)
+    top_users = sorted_users[:10]
 
-    raritycolor = rarityColors[rarityNames[rarity]] 
+    embed = discord.Embed(title="Leaderboard", color=0x00ff00)
+    for i, (user_id, credits) in enumerate(top_users):
+        member = ctx.guild.get_member(int(user_id))
+        username = member.name if member else "Unknown User"
+        embed.add_field(name=f"{i + 1}. {username}", value=f"{credits} credits", inline=False)
 
-    embed = discord.Embed(color=raritycolor)
-    embed.add_field(name=f"{rarityNames[rarity]} {mob_name}", value=f"You got a {rarityNames[rarity]} {mob_name}!", inline=False)
-    embed.add_field(name="Rare Mob Multiplier!", value=f"x{mob_multiplier}", inline=False)
-    embed.add_field(name=f"+{final_credits} CREDITS", value=f"{rarityCredits[rarity]} ({rarityNames[rarity]}) x{mob_multiplier} ({mob_name})", inline=False)
-    embed.add_field(name="RIGGED!", value="The luck is rel! (Trust)", inline=False)
-    ctx.send(embed=embed)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def pay(ctx, user: discord.Member, amount: int):
+    if amount <= 0:
+        await ctx.send("Amount must be positive.")
+        return
+
+    sender_id = ctx.author.id
+    recipient_id = user.id
+
+    ensure_user_data(sender_id)
+    ensure_user_data(recipient_id)
+
+    sender_credits = get_user_credits(sender_id)
+    if sender_credits < amount:
+        await ctx.send("You don't have enough credits.")
+        return
+
+    tax = int(amount * 0.1)
+    net_amount = amount - tax
+
+    # Transfer credits
+    set_user_credits(sender_id, sender_credits - amount)
+    set_user_credits(recipient_id, get_user_credits(recipient_id) + net_amount)
+
+    embed = discord.Embed(color=0xFFFF00)
+    embed.add_field(name="Success!", value=f"{ctx.author.mention} has given {user.mention} {net_amount} credits! (after 10% tax of {tax})", inline=False)
+    await ctx.send(embed=embed)
 
     save_db()
 
-# Start the bot with your token
-bot.run('your-bot-token')
+@bot.command()
+async def sac(ctx, amount: int):
+    if amount <= 0:
+        await ctx.send("Amount must be positive.")
+        return
+
+    user_id = ctx.author.id
+    ensure_user_data(user_id)
+
+    if db.get("sac_active", False):
+        await ctx.send("A sacrifice is already active.")
+        return
+
+    credits = get_user_credits(user_id)
+    if credits < amount:
+        await ctx.send("You don't have enough credits to sacrifice.")
+        return
+
+    tax = int(amount * 0.1)
+    net_amount = amount - tax
+
+    db["sac_amount"] = net_amount
+    db["sac_active"] = True
+    db["sac_spins"] = 0
+    db["sac_limit_reached"] = False
+    db["custom_luck_multiplier"] = round(max(0.207125 * (2.34915 * net_amount + 463.458) ** 0.5 - 4.48083, 1), 1)
+
+    luck_multiplier = db["custom_luck_multiplier"]
+
+    set_user_credits(user_id, credits - amount)
+    embed = discord.Embed(color=0xFFFF00)
+    embed.add_field(name="The Flowr gods heed your sacrifice...", value="\u200b", inline=False)
+    embed.add_field(name=f"A {luck_multiplier}x luck boost has been activated!", value="\u200b", inline=False)
+    embed.add_field(name="Sacrificed Social Credit", value=f"{net_amount} (after 10% tax of {tax})", inline=False)
+    embed.add_field(name="Successful Sacrifice", value=f"{ctx.author.mention} sacrificed {amount} credits!", inline=False)
+
+    await ctx.send(embed=embed)
+
+    save_db()
+
+@bot.command()
+async def help1(ctx):
+    embed = discord.Embed(title="Help", color=0x00ff00)
+    embed.add_field(name="!spin", value="Spin the wheel to earn credits and receive a random rarity based on luck and mob type.", inline=False)
+    embed.add_field(name="!credit", value="Check your current credit balance.", inline=False)
+    embed.add_field(name="!addcredits <user> <amount>", value="Add credits to a user. Admins only.", inline=False)
+    embed.add_field(name="!removecredits <user> <amount>", value="Remove credits from a user. Admins only.", inline=False)
+    embed.add_field(name="!setcredits <user> <amount>", value="Set a user's credits to a specific amount. Admins only.", inline=False)
+    embed.add_field(name="!endsac", value="End the current sacrifice. Admins only.", inline=False)
+    embed.add_field(name="!unsac", value="Disable sacrifices. Admins only.", inline=False)
+    embed.add_field(name="!assign_role <user> <role>", value="Assign a role to a user. Owner only.", inline=False)
+    embed.add_field(name="!remove_role <user> <role>", value="Remove a role from a user. Owner only.", inline=False)
+    embed.add_field(name="!rig <rarity>", value="Set a rigged spin result to a specific rarity. Admins only.", inline=False)
+    embed.add_field(name="!pay <user> <amount>", value="Pay credits to another user with a 10% tax.", inline=False)
+    embed.add_field(name="!sac <amount>", value="Sacrifice credits to increase your luck boost.", inline=False)
+    embed.add_field(name="!leaderboard", value="Show the top 10 users based on credits.", inline=False)
+    embed.add_field(name="!market [page]", value="Access the market", inline=False)
+    embed.add_field(name="!addmarket", value="Add to the market", inline=False)
+    embed.add_field(name="!delmarket [market id]", value="Delete your created market", inline=False)
+    await ctx.send(embed=embed)
+
+bot.run('YOUR_BOT_TOKEN')
