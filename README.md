@@ -15,9 +15,11 @@ In terms of adding this bot to your own server replace the "your-bot-token" at t
         return" 
 ```
 
-replace the "spin" with the channel name you want the bot to be used in or delete it entirely depending on how you want to use this bot
+replace the "spin" with the channel name you want the bot to be used in or delete it entirely depending on how you want to use this bot.
 
-To make the bot you have to use the [discord devoloper portal](https://discord.com/developers). You have to make a bot becuase our bot is not availible for the public. (Only use for out bot is in our server.
+*Optional*
+
+If you would like to make your own bot and pair the code with it you have to use the [discord devoloper portal](https://discord.com/developers).
 
 ## Help us please
 As this bot is still being developed, if you have any suggestions or find any bugs (there will be), please DM one of us on discord with the usernames below
