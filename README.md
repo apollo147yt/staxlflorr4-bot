@@ -51,6 +51,7 @@ As this bot is still being developed, if you have any suggestions or find any bu
 
 ![Static Badge](https://img.shields.io/badge/Discord-_apollo147-blue?style=plastic&labelColor=%23000000)
 ![Static Badge](https://img.shields.io/badge/Discord-_staxlflorr-blue?style=plastic&labelColor=%23000000) 
+
 Discord server: 
 
 ## Credits 
