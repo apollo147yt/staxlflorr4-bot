@@ -5,17 +5,27 @@ This bot is taking a while.
 This project started of as a complete joke and has turned into something decent.
 
 ## Commands
-"!spin" you roll a mob and a rarity and get credits depending on what you got\n
-"!credit [user {optional}]" checks how many Social credits a user has. If someone is mentioned they will be checked. If no one is mentioned the author will be checked.\n
-"!sac [amount]" sacrifice an amout of credits for a luck boost (min 100)\n
-"!leaderboard" show top 10 people with the most credits in the server (can bug easily if it does dm one of us so we can fix it)\n
-"!giveaway [duration in minutes] [prize]" start a giveaway (admin only)\n
-    "!enter" enter the current giveaway (dont do 2 at the same time it usually breaks)\n
-    "!endgiveaway" end the current giveaway (admin only)\n
-"!endsac" ends the current sacrifice (admin only) Great for trolling!\n
-"!addcredits [user] [amount]" add credits to a user (admin only)\n
-"setcredits [user] [amount]" set a users credits (admin only)\n
-"removecredits [user] [amount {in positive amount}]" remove credits from a user (admin only)\n
+"!spin" you roll a mob and a rarity and get credits depending on what you got
+
+"!credit [user {optional}]" checks how many Social credits a user has. If someone is mentioned they will be checked. If no one is mentioned the author will be checked.
+
+"!sac [amount]" sacrifice an amout of credits for a luck boost (min 100)
+
+"!leaderboard" show top 10 people with the most credits in the server (can bug easily if it does dm one of us so we can fix it)
+
+"!giveaway [duration in minutes] [prize]" start a giveaway (admin only)
+
+    "!enter" enter the current giveaway (dont do 2 at the same time it usually breaks)
+    
+    "!endgiveaway" end the current giveaway (admin only)
+    
+"!endsac" ends the current sacrifice (admin only) Great for trolling!
+
+"!addcredits [user] [amount]" add credits to a user (admin only)
+
+"setcredits [user] [amount]" set a users credits (admin only)
+
+"removecredits [user] [amount {in positive amount}]" remove credits from a user (admin only)
 
 ## Instructions for setup
 Use python. (This bot is written in python. To edit the code use a code editor such as VScode).
