@@ -471,12 +471,23 @@ async def leaderboard(ctx):
 
     embed = discord.Embed(title="Leaderboard", color=0x00ff00)
     for i, (user_id, credits) in enumerate(top_users):
-        member = ctx.guild.get_member(int(user_id))
-        username = member.name if member else "Unknown User"
+        try:
+            # Attempt to convert user_id to an int and fetch the member
+            member = await bot.fetch_user(int(user_id))
+            username = member.mention if member else f"Unknown User (ID: {user_id})"
+        except ValueError:
+            # If user_id isn't an integer, use it as is
+            username = f"Invalid User ID: {user_id}"
+        except discord.NotFound:
+            # Handle case where the user is not found by Discord
+            username = f"User Not Found (ID: {user_id})"
+        except discord.HTTPException:
+            # Handle any other HTTP related issues
+            username = f"Failed to fetch user (ID: {user_id})"
+
         embed.add_field(name=f"{i + 1}. {username}", value=f"{credits} credits", inline=False)
 
     await ctx.send(embed=embed)
-
     save_db()
 
 @bot.command()
@@ -661,5 +672,57 @@ async def endgiveaway(ctx):
 async def giveaway_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
         await ctx.send("You do not have permission to use this command.")
+
+@bot.command()
+async def buy(ctx, market_id: int):
+    # Ensure the market item exists
+    market_item = db["market"].get(str(market_id))
+    if not market_item:
+        await ctx.send("This market item does not exist.")
+        return
+
+    buyer_id = ctx.author.id
+    item_price = market_item["price"]
+
+    ensure_user_data(buyer_id)
+    buyer_credits = get_user_credits(buyer_id)
+
+    # Check if the buyer has enough credits
+    if buyer_credits < item_price:
+        await ctx.send("You do not have enough credits to purchase this item.")
+        return
+
+    seller_id = int(market_item["owner"])
+    ensure_user_data(seller_id)
+    seller_credits = get_user_credits(seller_id)
+
+    # Deduct the price from the buyer's credits
+    new_buyer_credits = buyer_credits - item_price
+    set_user_credits(buyer_id, new_buyer_credits)
+
+    # Calculate tax (10%)
+    tax = item_price * 0.1
+    net_price = item_price - tax
+
+    # Add the net price to the seller's credits
+    new_seller_credits = seller_credits + net_price
+    set_user_credits(seller_id, new_seller_credits)
+
+    # Send confirmation message to the buyer
+    await ctx.send(
+        f"{ctx.author.mention} has purchased '{market_item['name']}' from the market for {item_price} credits! "
+        f"The seller received {net_price} credits after tax."
+    )
+
+    # DM the seller about the purchase
+    seller = bot.get_user(seller_id)
+    if seller:
+        try:
+            await seller.send(
+                f"Your item '{market_item['name']}' was purchased by {ctx.author.name}#{ctx.author.discriminator} "
+                f"for {item_price} credits. You received {net_price} credits after tax."
+            )
+        except discord.Forbidden:
+            await ctx.send(f"Could not DM the seller about the purchase, but the transaction was completed.")
 
 bot.run('your-bot-token')
