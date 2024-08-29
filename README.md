@@ -50,7 +50,8 @@ If you would like to make your own bot and pair the code with it you have to use
 As this bot is still being developed, if you have any suggestions or find any bugs (there will be), please DM one of us on discord with the usernames below
 
 ![Static Badge](https://img.shields.io/badge/Discord-_apollo147-blue?style=plastic&labelColor=%23000000)
-![Static Badge](https://img.shields.io/badge/Discord-_staxlflorr-blue?style=plastic&labelColor=%23000000)
+![Static Badge](https://img.shields.io/badge/Discord-_staxlflorr-blue?style=plastic&labelColor=%23000000) 
+Discord server: 
 
 ## Credits 
 apollo147 and staxl4 made the bot.
