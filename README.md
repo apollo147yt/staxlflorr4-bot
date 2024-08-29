@@ -15,9 +15,9 @@ This project started of as a complete joke and has turned into something decent.
 
 "!giveaway [duration in minutes] [prize]" start a giveaway (admin only)
 
-    "!enter" enter the current giveaway (dont do 2 at the same time it usually breaks)
+"!enter" enter the current giveaway (dont do 2 at the same time it usually breaks)
     
-    "!endgiveaway" end the current giveaway (admin only)
+"!endgiveaway" end the current giveaway (admin only)
     
 "!endsac" ends the current sacrifice (admin only) Great for trolling!
 
