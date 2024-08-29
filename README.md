@@ -1,8 +1,11 @@
 ![Static Badge](https://img.shields.io/badge/Version_Alpha_1.0.0-blue)
 
 ## Information
-This bot is taking a while.
-This project started of as a complete joke and has turned into something decent.
+This project started of as a complete joke and has turned into something decent surprisingly.
+There are still so many bugs and commands that dont work as intended which are being worked on constantly.
+Please Support us on our Discord server:
+Special thanks to 4ware who helped us develop the bot in its early stages.
+Another Special thanks to all on our discord server helping us find bugs and Suggesting new ideas for the bot
 
 ## Commands
 "!spin" you roll a mob and a rarity and get credits depending on what you got
@@ -54,3 +57,5 @@ As this bot is still being developed, if you have any suggestions or find any bu
 apollo147 and staxl4 made the bot.
 
 Thank you to peterpeterp who made the flowr discord server bot, as this one is heavily inspired by it.
+
+Thank you all for using this bot
