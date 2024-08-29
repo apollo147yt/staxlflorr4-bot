@@ -47,7 +47,7 @@ replace the "spin" with the channel name you want the bot to be used in or delet
 
 If you would like to make your own bot and pair the code with it you have to use the [discord devoloper portal](https://discord.com/developers).
 
-## Help us please
+## Discord
 As this bot is still being developed, if you have any suggestions or find any bugs (there will be), please DM one of us on discord with the usernames below
 
 ![Static Badge](https://img.shields.io/badge/Discord-_apollo147-blue?style=plastic&labelColor=%23000000)
