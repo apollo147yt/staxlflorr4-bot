@@ -1,8 +1,10 @@
+import asyncio
 import discord
 from discord.ext import commands
 import random
 import json
 import os
+from datetime import timedelta
 
 # Default data structure
 default_db = {
@@ -14,7 +16,8 @@ default_db = {
     "spins_count": {},  
     "sac_spins_limit": 10,
     "custom_luck_multiplier": 1,
-    "market": {}
+    "market": {},
+    "giveaway_data": {}
 }
 
 # Ensure the database file exists
@@ -375,10 +378,10 @@ async def addcredits(ctx, user: discord.Member, amount: int):
     user_id = user.id
     ensure_user_data(user_id)
     current_credits = get_user_credits(user_id)
-    new_credits = current_credits + amount
+    new_credits = current_credits + float(amount)
     set_user_credits(user_id, new_credits)
 
-    await ctx.send(f"Added {amount} credits to {user.mention}. They now have {new_credits} credits.")
+    await ctx.send(f"Added {float(amount)} credits to {user.mention}. They now have {float(new_credits)} credits.")
     
     save_db()
 
@@ -566,4 +569,97 @@ async def help1(ctx):
 
     save_db()
 
-bot.run('your bot token')
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def giveaway(ctx, duration: int, *, prize: str):
+    """Start a giveaway. Only admins can use this command.
+    
+    Args:
+    duration (int): Duration of the giveaway in minutes.
+    prize (str): Description of the prize.
+    """
+    if duration <= 0:
+        await ctx.send("Duration must be greater than 0 minutes.")
+        return
+
+    # Check if there is an active giveaway
+    if "giveaway_data" in db and db["giveaway_data"].get("active", False):
+        await ctx.send("A giveaway is already active.")
+        return
+
+    # Start the giveaway
+    end_time = discord.utils.utcnow() + timedelta(minutes=duration)
+    db["giveaway_data"] = {
+        "active": True,
+        "prize": prize,
+        "end_time": end_time.isoformat(),
+        "entries": []
+    }
+    save_db()
+
+    embed = discord.Embed(title="Giveaway Started!", description=f"Prize: {prize}\nDuration: {duration} minutes", color=0x00ff00)
+    embed.set_footer(text=f"Ends at {end_time.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def enter(ctx):
+    """Enter the active giveaway."""
+    if "giveaway_data" not in db or not db["giveaway_data"].get("active", False):
+        await ctx.send("There is no active giveaway.")
+        return
+
+    user_id = str(ctx.author.id)
+
+    # Check if the user has already entered
+    if user_id in db["giveaway_data"]["entries"]:
+        await ctx.send("You have already entered the giveaway.")
+        return
+
+    # Add the user to the giveaway entries
+    db["giveaway_data"]["entries"].append(user_id)
+    save_db()
+
+    await ctx.send(f"{ctx.author.mention} has been entered into the giveaway!")
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def endgiveaway(ctx):
+    """End the active giveaway and announce the winner."""
+    if "giveaway_data" not in db or not db["giveaway_data"].get("active", False):
+        await ctx.send("No active giveaway to end.")
+        return
+
+    giveaway_data = db["giveaway_data"]
+    giveaway_data["active"] = False
+    save_db()
+
+    # Determine the winner
+    if giveaway_data["entries"]:
+        winner_id = random.choice(giveaway_data["entries"])
+        winner = await bot.fetch_user(int(winner_id))
+        prize = int(giveaway_data["prize"])  # Ensure prize is an integer
+
+        embed = discord.Embed(title="Giveaway Ended!", description=f"Congratulations {winner.mention}! You won {prize} Credits!", color=0x00ff00)
+        await ctx.send(embed=embed)
+
+        # Ensure user data exists and update credits
+        ensure_user_data(winner_id)
+        current_credits = get_user_credits(winner_id)
+        new_credits = current_credits + prize
+        set_user_credits(winner_id, new_credits)
+        save_db()
+        
+    else:
+        await ctx.send("No one entered the giveaway. No winner to announce.")
+
+    # Clear the giveaway data
+    db["giveaway_data"] = {}
+    save_db()
+
+# Error handler for the command
+@giveaway.error
+async def giveaway_error(ctx, error):
+    if isinstance(error, commands.CheckFailure):
+        await ctx.send("You do not have permission to use this command.")
+
+bot.run('your-bot-token')
