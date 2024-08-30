@@ -37,6 +37,8 @@ Another Special thanks to all on our discord server helping us find bugs and Sug
 
 "!delmarket [market_id]" delete your created market (admins can delete any markets)
 
+"!buy [market_id]" buy a market offer
+
 ## Instructions for setup
 Use python. (This bot is written in python. To edit the code use a code editor such as VScode).
 to start copy the code down or download it whatever you prefer.
