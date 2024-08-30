@@ -29,6 +29,12 @@ Another Special thanks to all on our discord server helping us find bugs and Sug
 
 "removecredits [user] [amount {in positive amount}]" remove credits from a user (admin only)
 
+"!market [page]" access the server market where people can add offers for an amount of credits
+
+"!addmarket" add a market offer to the market
+
+"!delmarket [market_id]" delete your created market (admins can delete any markets)
+
 ## Instructions for setup
 Use python. (This bot is written in python. To edit the code use a code editor such as VScode).
 to start copy the code down or download it whatever you prefer.
