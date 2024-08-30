@@ -5,6 +5,7 @@ import random
 import json
 import os
 from datetime import timedelta
+import re
 
 # Default data structure
 default_db = {
@@ -108,118 +109,133 @@ mobMulti = [
 async def on_ready():
     print(f'We have logged in as {bot.user}')
 
-# Spin command
-@bot.command()
-async def spin(ctx):
-    if ctx.channel.name != 'spin':
-        await ctx.send("This command can only be used in the #spin channel.")
+@bot.event
+async def on_message(message):
+    if message.author.bot:
         return
 
-    try:
-        user_id = ctx.author.id
-        ensure_user_data(user_id)
+    @bot.event
+    async def on_message(message):
+        if message.author.bot:
+            return
 
-        # Set default luck multiplier to 1
-        luck_multiplier = db.get("custom_luck_multiplier", 1)
+    # Match any command that starts with '!spin' followed by any characters
+    if re.search(r'!spin', message.content):
+        ctx = await bot.get_context(message)
 
-        # Apply sacrifice luck boost if active
-        if db.get("sac_active", False):
-            sac_amount = db.get("sac_amount", 0)
-            luck_multiplier = round(max(0.207125 * (2.34915 * sac_amount + 463.458) ** 0.5 - 4.48083, 1), 1)
+        # Ensure the message is in the correct channel
+        if ctx.channel.name != 'spin':
+            await ctx.send("This command can only be used in the #spin channel.")
+            return
 
-        randomValue = random.random()
-        rng = randomValue / (((luck_multiplier - 1) * 0.7) + 1)
+        try:
+            user_id = ctx.author.id
+            ensure_user_data(user_id)
 
-        rarity = 0
+            # Set default luck multiplier to 1
+            luck_multiplier = db.get("custom_luck_multiplier", 1)
 
-        if rng < 0.55:
-            rarity+=1
-        if rng < 0.35:
-            rarity+=1
-        if rng < 0.2:
-            rarity+=1
-        if rng < 0.1:
-            rarity+=1
-        if rng < 0.05:
-            rarity+=1
-        if rng < 0.02:
-            rarity+=1
-        if rng < 0.01:
-            rarity+=1
-        if rng < 0.005:
-            rarity+=1
-        if rng < 0.0025:
-            rarity+=1
-        if rng < 0.001:
-            rarity+=1
-        if rng < 0.00044:
-            rarity+=1
-        if rng < 0.00014:
-            rarity+=1
-        if rng < 0.00004:
-            rarity+=1
-        if rng < 0.00001:
-            rarity+=1
-        if rng < 0.000004:
-            rarity+=1
-        if rng < 0.000001:
-            rarity+=1
-        if rng < 0.0000004:
-            rarity+=1
-        if rng < 0.0000001:
-            rarity+=1
-        if rng < 0.00000004:
-            rarity+=1
-        if rng < 0.00000001:
-            rarity+=1
-        if rng == 0:
-            rarity+=1
+            # Apply sacrifice luck boost if active
+            if db.get("sac_active", False):
+                sac_amount = db.get("sac_amount", 0)
+                luck_multiplier = round(max(0.207125 * (2.34915 * sac_amount + 463.458) ** 0.5 - 4.48083, 1), 1)
 
-        # Determine mob type and multiplier
-        mob_index = random.randint(0, len(mobType) - 1)
-        mob_name = mobType[mob_index]
-        mob_multiplier = mobMulti[mob_index]
+            random_value = random.random()
+            rng = random_value / (((luck_multiplier - 1) * 0.7) + 1)
 
-        final_credits = rarityCredits[rarity] * mob_multiplier
+            rarity = 0
 
-        current_credits = get_user_credits(user_id)
-        new_credits = current_credits + final_credits
-        set_user_credits(user_id, new_credits)
+            # Determine rarity based on RNG
+            if rng < 0.55:
+                rarity += 1
+            if rng < 0.35:
+                rarity += 1
+            if rng < 0.2:
+                rarity += 1
+            if rng < 0.1:
+                rarity += 1
+            if rng < 0.05:
+                rarity += 1
+            if rng < 0.02:
+                rarity += 1
+            if rng < 0.01:
+                rarity += 1
+            if rng < 0.005:
+                rarity += 1
+            if rng < 0.0025:
+                rarity += 1
+            if rng < 0.001:
+                rarity += 1
+            if rng < 0.00044:
+                rarity += 1
+            if rng < 0.00014:
+                rarity += 1
+            if rng < 0.00004:
+                rarity += 1
+            if rng < 0.00001:
+                rarity += 1
+            if rng < 0.000004:
+                rarity += 1
+            if rng < 0.000001:
+                rarity += 1
+            if rng < 0.0000004:
+                rarity += 1
+            if rng < 0.0000001:
+                rarity += 1
+            if rng < 0.00000004:
+                rarity += 1
+            if rng < 0.00000001:
+                rarity += 1
+            if rng == 0:
+                rarity += 1
 
-        # Get the color for the rarity
-        raritycolor = rarityColors[rarityNames[rarity]]
+            # Determine mob type and multiplier
+            mob_index = random.randint(0, len(mobType) - 1)
+            mob_name = mobType[mob_index]
+            mob_multiplier = mobMulti[mob_index]
 
-        embed = discord.Embed(color=raritycolor)
-        embed.add_field(name=f"{rarityNames[rarity]} {mob_name}", value=f"You got a {rarityNames[rarity]} {mob_name}!", inline=False)
-        if float(luck_multiplier) > 1:
-            embed.add_field(name="Frenzy!", value=f"{luck_multiplier}x luck from a sacrifice", inline=False)
-        embed.add_field(name="Rare Mob Multiplier!", value=f"x{mob_multiplier}", inline=False)
-        embed.add_field(name=f"+{final_credits} CREDITS", value=f"{rarityCredits[rarity]} ({rarityNames[rarity]}) x{mob_multiplier} ({mob_name})", inline=False)
+            final_credits = rarityCredits[rarity] * mob_multiplier
 
-        if db.get("sac_active", False):
-            sac_spins = db.get("sac_spins", 0)
-            if sac_spins >= db.get("sac_spins_limit", 10):
-                if not db.get("sac_limit_reached", False):
-                    await ctx.send("Sacrifice spins limit reached.")
-                    db["sac_limit_reached"] = True
-                    # Reset luck boost and other sacrifice-related values
-                    db["custom_luck_multiplier"] = 1
-                    db["sac_amount"] = 0
-                    db["sac_active"] = False
-                    db["sac_spins"] = 0
-                # Send the result embed even if the limit is reached
-                await ctx.reply(embed=embed, mention_author=True)
+            current_credits = get_user_credits(user_id)
+            new_credits = current_credits + final_credits
+            set_user_credits(user_id, new_credits)
+
+            # Get the color for the rarity
+            raritycolor = rarityColors[rarityNames[rarity]]
+
+            embed = discord.Embed(color=raritycolor)
+            embed.add_field(name=f"{rarityNames[rarity]} {mob_name}", value=f"You got a {rarityNames[rarity]} {mob_name}!", inline=False)
+            if float(luck_multiplier) > 1:
+                embed.add_field(name="Frenzy!", value=f"{luck_multiplier}x luck from a sacrifice", inline=False)
+            embed.add_field(name="Rare Mob Multiplier!", value=f"x{mob_multiplier}", inline=False)
+            embed.add_field(name=f"+{final_credits} CREDITS", value=f"{rarityCredits[rarity]} ({rarityNames[rarity]}) x{mob_multiplier} ({mob_name})", inline=False)
+
+            if db.get("sac_active", False):
+                sac_spins = db.get("sac_spins", 0)
+                if sac_spins >= db.get("sac_spins_limit", 10):
+                    if not db.get("sac_limit_reached", False):
+                        await ctx.send("Sacrifice spins limit reached.")
+                        db["sac_limit_reached"] = True
+                        # Reset luck boost and other sacrifice-related values
+                        db["custom_luck_multiplier"] = 1
+                        db["sac_amount"] = 0
+                        db["sac_active"] = False
+                        db["sac_spins"] = 0
+                    # Send the result embed even if the limit is reached
+                    await ctx.reply(embed=embed, mention_author=True)
+                else:
+                    db["sac_spins"] += 1
+                    await ctx.reply(embed=embed, mention_author=True)
             else:
-                db["sac_spins"] += 1
                 await ctx.reply(embed=embed, mention_author=True)
-        else:
-            await ctx.reply(embed=embed, mention_author=True)
-            db["spins_count"][str(user_id)] += 1
+                db["spins_count"][str(user_id)] += 1
 
-        save_db()
+            save_db()
 
-    except Exception as e:
-        await ctx.send(f"An error occurred: {e}")
+        except Exception as e:
+            await ctx.send(f"my goofy ass did this wrong: {e}. Ping a bot coder to fix it")
+
+    await bot.process_commands(message)
 
 class MarketAddModal(discord.ui.Modal):
     def __init__(self, user_id):
@@ -282,29 +298,26 @@ async def addmarket(ctx):
     view.add_item(MarketAddButton())
     await ctx.send("Click the button below to add a market item (note there is a 10k fee).", view=view)
 
-# Market Command
 @bot.command()
 async def market(ctx, page: int = 1):
     items_per_page = 5
     start_index = (page - 1) * items_per_page
     end_index = start_index + items_per_page
     
-    market_items = list(db["market"].values())[start_index:end_index]
+    market_items = list(db["market"].items())[start_index:end_index]
     if not market_items:
         await ctx.send("No items found on this page.")
         return
     
     embed = discord.Embed(title=f"Market - Page {page}", color=0x00ff00)
-    for item in market_items:
+    for item_id, item in market_items:
         embed.add_field(
-            name=item["name"],
+            name=f"{item['name']} (ID: {item_id})",
             value=f"**Description:** {item['description']}\n**Price:** {item['price']} credits\n**Owner:** <@{item['owner']}>",
             inline=False
         )
     
     await ctx.send(embed=embed)
-
-from discord.ext import commands
 
 @bot.command()
 @commands.has_permissions(administrator=True)
@@ -347,26 +360,45 @@ async def remove_role(ctx, user: discord.Member, role: discord.Role):
 
     save_db()
 
-@bot.command()
-async def credit(ctx, user: discord.Member = None):
-    if user is None:
-        user = ctx.author
-    try:
-        user_id = user.id
-        ensure_user_data(user_id)
-        current_credits = get_user_credits(user_id)
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
 
-        embed = discord.Embed(title="Social Credits!", color=0x00ff00)
-        embed.add_field(name="Credits", value=f"{user.mention} has {current_credits} credits!", inline=False)
+    # Check if the message starts with !credit
+    if message.content.startswith("!credit"):
+        ctx = await bot.get_context(message)
+        try:
+            # Extract the portion after !credit
+            user_id_or_name = message.content[7:].strip()  # Strip the part after "!credit"
+            
+            if user_id_or_name:  # If there is something after !credit
+                try:
+                    # Try to convert it to a member using mention or name
+                    user = await commands.MemberConverter().convert(ctx, user_id_or_name)
+                except commands.BadArgument:
+                    # If conversion fails, assume the user meant the author
+                    user = ctx.author
+            else:
+                user = ctx.author  # Default to the author if no argument is provided
 
-        await ctx.reply(embed=embed, mention_author=True)
+            user_id = user.id
+            ensure_user_data(user_id)
+            current_credits = get_user_credits(user_id)
 
-        # Ensure any changes are saved
-        save_db()
+            embed = discord.Embed(title="Social Credits!", color=0x00ff00)
+            embed.add_field(name="Credits", value=f"{user.mention} has {current_credits} credits!", inline=False)
 
-    except Exception as e:
-        print(f"Error in !credit command: {e}")
-        await ctx.send("An error occurred while retrieving the credits.")
+            await ctx.reply(embed=embed, mention_author=True)
+
+            # Ensure any changes are saved
+            save_db()
+
+        except Exception as e:
+            print(f"Error in !credit command: {e}")
+            await ctx.send("An error occurred while retrieving the credits.")
+
+    await bot.process_commands(message)
 
 @bot.command()
 @commands.has_permissions(administrator=True)
