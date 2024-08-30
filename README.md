@@ -2,7 +2,9 @@
 
 ## Information
 This project started of as a complete joke and has turned into something decent surprisingly. 
+
 There are still so many bugs and commands that dont work as intended which are being worked on constantly. 
+
 Special thanks to 4ware who helped us develop the bot in its early stages! 
 Another Special thanks to all on our discord server helping us find bugs and Suggesting new ideas for the bot!
 
