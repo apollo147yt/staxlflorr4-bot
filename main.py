@@ -109,133 +109,122 @@ mobMulti = [
 async def on_ready():
     print(f'We have logged in as {bot.user}')
 
-@bot.event
-async def on_message(message):
-    if message.author.bot:
-        return
-
-    @bot.event
-    async def on_message(message):
-        if message.author.bot:
-            return
-
-    # Match any command that starts with '!spin' followed by any characters
-    if re.search(r'!spin', message.content):
-        ctx = await bot.get_context(message)
-
-        # Ensure the message is in the correct channel
+@bot.command()
+async def spin(ctx):
+    # Allow admins to use the command everywhere
+    if not ctx.author.guild_permissions.administrator:
+        # Restrict non-admins to the #spin channel
         if ctx.channel.name != 'spin':
             await ctx.send("This command can only be used in the #spin channel.")
             return
 
-        try:
-            user_id = ctx.author.id
-            ensure_user_data(user_id)
+    try:
+        user_id = ctx.author.id
+        ensure_user_data(user_id)
 
-            # Set default luck multiplier to 1
-            luck_multiplier = db.get("custom_luck_multiplier", 1)
+        # Set default luck multiplier to 1
+        luck_multiplier = db.get("custom_luck_multiplier", 1)
 
-            # Apply sacrifice luck boost if active
-            if db.get("sac_active", False):
-                sac_amount = db.get("sac_amount", 0)
-                luck_multiplier = round(max(0.207125 * (2.34915 * sac_amount + 463.458) ** 0.5 - 4.48083, 1), 1)
+        # Apply sacrifice luck boost if active
+        if db.get("sac_active", False):
+            sac_amount = db.get("sac_amount", 0)
+            luck_multiplier = round(max(0.207125 * (2.34915 * sac_amount + 463.458) ** 0.5 - 4.48083, 1), 1)
 
-            random_value = random.random()
-            rng = random_value / (((luck_multiplier - 1) * 0.7) + 1)
+        random_value = random.random()
+        rng = random_value / (((luck_multiplier - 1) * 0.7) + 1)
 
-            rarity = 0
+        rarity = 0
 
-            # Determine rarity based on RNG
-            if rng < 0.55:
-                rarity += 1
-            if rng < 0.35:
-                rarity += 1
-            if rng < 0.2:
-                rarity += 1
-            if rng < 0.1:
-                rarity += 1
-            if rng < 0.05:
-                rarity += 1
-            if rng < 0.02:
-                rarity += 1
-            if rng < 0.01:
-                rarity += 1
-            if rng < 0.005:
-                rarity += 1
-            if rng < 0.0025:
-                rarity += 1
-            if rng < 0.001:
-                rarity += 1
-            if rng < 0.00044:
-                rarity += 1
-            if rng < 0.00014:
-                rarity += 1
-            if rng < 0.00004:
-                rarity += 1
-            if rng < 0.00001:
-                rarity += 1
-            if rng < 0.000004:
-                rarity += 1
-            if rng < 0.000001:
-                rarity += 1
-            if rng < 0.0000004:
-                rarity += 1
-            if rng < 0.0000001:
-                rarity += 1
-            if rng < 0.00000004:
-                rarity += 1
-            if rng < 0.00000001:
-                rarity += 1
-            if rng == 0:
-                rarity += 1
+        # Determine rarity based on RNG
+        if rng < 0.55:
+            rarity += 1
+        if rng < 0.35:
+            rarity += 1
+        if rng < 0.2:
+            rarity += 1
+        if rng < 0.1:
+            rarity += 1
+        if rng < 0.05:
+            rarity += 1
+        if rng < 0.02:
+            rarity += 1
+        if rng < 0.01:
+            rarity += 1
+        if rng < 0.005:
+            rarity += 1
+        if rng < 0.0025:
+            rarity += 1
+        if rng < 0.001:
+            rarity += 1
+        if rng < 0.00044:
+            rarity += 1
+        if rng < 0.00014:
+            rarity += 1
+        if rng < 0.00004:
+            rarity += 1
+        if rng < 0.00001:
+            rarity += 1
+        if rng < 0.000004:
+            rarity += 1
+        if rng < 0.000001:
+            rarity += 1
+        if rng < 0.0000004:
+            rarity += 1
+        if rng < 0.0000001:
+            rarity += 1
+        if rng < 0.00000004:
+            rarity += 1
+        if rng < 0.00000001:
+            rarity += 1
+        if rng == 0:
+            rarity += 1
 
-            # Determine mob type and multiplier
-            mob_index = random.randint(0, len(mobType) - 1)
-            mob_name = mobType[mob_index]
-            mob_multiplier = mobMulti[mob_index]
+        # Determine mob type and multiplier
+        mob_index = random.randint(0, len(mobType) - 1)
+        mob_name = mobType[mob_index]
+        mob_multiplier = mobMulti[mob_index]
 
-            final_credits = rarityCredits[rarity] * mob_multiplier
+        final_credits = rarityCredits[rarity] * mob_multiplier
 
-            current_credits = get_user_credits(user_id)
-            new_credits = current_credits + final_credits
-            set_user_credits(user_id, new_credits)
+        current_credits = get_user_credits(user_id)
+        new_credits = current_credits + final_credits
+        set_user_credits(user_id, new_credits)
 
-            # Get the color for the rarity
-            raritycolor = rarityColors[rarityNames[rarity]]
+        # Get the color for the rarity
+        raritycolor = rarityColors[rarityNames[rarity]]
 
-            embed = discord.Embed(color=raritycolor)
-            embed.add_field(name=f"{rarityNames[rarity]} {mob_name}", value=f"You got a {rarityNames[rarity]} {mob_name}!", inline=False)
-            if float(luck_multiplier) > 1:
-                embed.add_field(name="Frenzy!", value=f"{luck_multiplier}x luck from a sacrifice", inline=False)
-            embed.add_field(name="Rare Mob Multiplier!", value=f"x{mob_multiplier}", inline=False)
-            embed.add_field(name=f"+{final_credits} CREDITS", value=f"{rarityCredits[rarity]} ({rarityNames[rarity]}) x{mob_multiplier} ({mob_name})", inline=False)
+        embed = discord.Embed(color=raritycolor)
+        embed.add_field(name=f"{rarityNames[rarity]} {mob_name}", value=f"You got a {rarityNames[rarity]} {mob_name}!", inline=False)
+        if float(luck_multiplier) > 1:
+            embed.add_field(name="Frenzy!", value=f"{luck_multiplier}x luck from a sacrifice", inline=False)
+        embed.add_field(name="Rare Mob Multiplier!", value=f"x{mob_multiplier}", inline=False)
+        embed.add_field(name=f"+{final_credits} CREDITS", value=f"{rarityCredits[rarity]} ({rarityNames[rarity]}) x{mob_multiplier} ({mob_name})", inline=False)
 
-            if db.get("sac_active", False):
-                sac_spins = db.get("sac_spins", 0)
-                if sac_spins >= db.get("sac_spins_limit", 10):
-                    if not db.get("sac_limit_reached", False):
-                        await ctx.send("Sacrifice spins limit reached.")
-                        db["sac_limit_reached"] = True
-                        # Reset luck boost and other sacrifice-related values
-                        db["custom_luck_multiplier"] = 1
-                        db["sac_amount"] = 0
-                        db["sac_active"] = False
-                        db["sac_spins"] = 0
-                    # Send the result embed even if the limit is reached
-                    await ctx.reply(embed=embed, mention_author=True)
-                else:
-                    db["sac_spins"] += 1
-                    await ctx.reply(embed=embed, mention_author=True)
-            else:
+        if db.get("sac_active", False):
+            sac_spins = db.get("sac_spins", 0)
+            if sac_spins >= db.get("sac_spins_limit", 10):
+                if not db.get("sac_limit_reached", False):
+                    await ctx.send("Sacrifice spins limit reached.")
+                    db["sac_limit_reached"] = True
+                    # Reset luck boost and other sacrifice-related values
+                    db["custom_luck_multiplier"] = 1
+                    db["sac_amount"] = 0
+                    db["sac_active"] = False
+                    db["sac_spins"] = 0
+                # Send the result embed even if the limit is reached
                 await ctx.reply(embed=embed, mention_author=True)
-                db["spins_count"][str(user_id)] += 1
+            else:
+                db["sac_spins"] += 1
+                await ctx.reply(embed=embed, mention_author=True)
+        else:
+            await ctx.reply(embed=embed, mention_author=True)
+            db["spins_count"][str(user_id)] += 1
 
-            save_db()
+        save_db()
 
-        except Exception as e:
-            await ctx.send(f"my goofy ass did this wrong: {e}. Ping a bot coder to fix it")
+    except Exception as e:
+        await ctx.send(f"my goofy ass did this wrong: {e}. Ping a bot coder to fix it")
 
-    await bot.process_commands(message)
 
 class MarketAddModal(discord.ui.Modal):
     def __init__(self, user_id):
@@ -514,10 +503,16 @@ async def leaderboard(ctx):
             # Handle case where the user is not found by Discord
             username = f"User Not Found (ID: {user_id})"
         except discord.HTTPException:
-            # Handle any other HTTP related issues
+            # Handle any other HTTP-related issues
             username = f"Failed to fetch user (ID: {user_id})"
 
-        embed.add_field(name=f"{i + 1}. {username}", value=f"{credits} credits", inline=False)
+        # Set credits to "∞" if they exceed a certain threshold
+        if credits >= 1000000000000000000000000000:
+            credits = "∞"
+        else:
+            credits = str(credits)
+
+        embed.add_field(name="", value=f"{i + 1}. {username} has {credits} credits", inline=False)
 
     await ctx.send(embed=embed)
     save_db()
@@ -534,20 +529,29 @@ async def pay(ctx, user: discord.Member, amount: int):
     ensure_user_data(sender_id)
     ensure_user_data(recipient_id)
 
+    tax = int(amount * 0.1)
+    net_amount = amount + tax
+
+    old_sender_credits = get_user_credits(sender_id)
+    new_sender_credits = old_sender_credits - net_amount
+
+    old_recipient_credits = get_user_credits(recipient_id)
+    new_recipient_credits = old_recipient_credits + amount
+
     sender_credits = get_user_credits(sender_id)
-    if sender_credits < amount:
-        await ctx.send("You don't have enough credits.")
+    if sender_credits < net_amount:
+        await ctx.send("You don't have enough credits. (note ther is a 10% tax)")
         return
 
-    tax = int(amount * 0.1)
-    net_amount = amount - tax
-
     # Transfer credits
-    set_user_credits(sender_id, sender_credits - amount)
-    set_user_credits(recipient_id, get_user_credits(recipient_id) + net_amount)
+    set_user_credits(sender_id, sender_credits - net_amount)
+    set_user_credits(recipient_id, get_user_credits(recipient_id) + amount)
 
     embed = discord.Embed(color=0xFFFF00)
-    embed.add_field(name="Success!", value=f"{ctx.author.mention} has given {user.mention} {net_amount} credits! (after 10% tax of {tax})", inline=False)
+    embed.add_field(name="Success!", value=f"{ctx.author.mention} has given {user.mention} {amount} credits!", inline=False)
+    embed.add_field(name="", value=f"{ctx.author.mention} has been charged {net_amount} credits!", inline=False)
+    embed.add_field(name=f"", value=f"{ctx.author.mention} has {old_sender_credits} -> {new_sender_credits} Social Credits!", inline=True )
+    embed.add_field(name=f"", value=f"{user.mention} has {old_recipient_credits} -> {new_recipient_credits} Social Credits!", inline=True)
     await ctx.send(embed=embed)
 
     save_db()
@@ -564,20 +568,20 @@ async def sac(ctx, amount: int):
     if db.get("sac_active", False):
         await ctx.send("A sacrifice is already active.")
         return
+    
+    tax = int(amount * 0.1)
+    net_amount = amount + tax
 
     credits = get_user_credits(user_id)
-    if credits < amount:
+    if credits < net_amount:
         await ctx.send("You don't have enough credits to sacrifice.")
         return
 
-    tax = int(amount * 0.1)
-    net_amount = amount - tax
-
-    db["sac_amount"] = net_amount
+    db["sac_amount"] = amount
     db["sac_active"] = True
     db["sac_spins"] = 0
     db["sac_limit_reached"] = False
-    db["custom_luck_multiplier"] = round(max(0.207125 * (2.34915 * net_amount + 463.458) ** 0.5 - 4.48083, 1), 1)
+    db["custom_luck_multiplier"] = round(max(0.207125 * (2.34915 * amount + 463.458) ** 0.5 - 4.48083, 1), 1)
 
     luck_multiplier = db["custom_luck_multiplier"]
 
@@ -585,7 +589,7 @@ async def sac(ctx, amount: int):
     embed = discord.Embed(color=0xFFFF00)
     embed.add_field(name="The Flowr gods heed your sacrifice...", value="\u200b", inline=False)
     embed.add_field(name=f"A {luck_multiplier}x luck boost has been activated!", value="\u200b", inline=False)
-    embed.add_field(name="Sacrificed Social Credit", value=f"{net_amount} (after 10% tax of {tax})", inline=False)
+    embed.add_field(name="Sacrificed Social Credit", value=f"{amount})", inline=False)
     embed.add_field(name="Successful Sacrifice", value=f"{ctx.author.mention} sacrificed {amount} credits!", inline=False)
 
     await ctx.send(embed=embed)
@@ -728,22 +732,22 @@ async def buy(ctx, market_id: int):
     ensure_user_data(seller_id)
     seller_credits = get_user_credits(seller_id)
 
-    # Deduct the price from the buyer's credits
-    new_buyer_credits = buyer_credits - item_price
-    set_user_credits(buyer_id, new_buyer_credits)
-
     # Calculate tax (10%)
     tax = item_price * 0.1
-    net_price = item_price - tax
+    net_price = item_price + tax
+
+    # Deduct the price from the buyer's credits
+    new_buyer_credits = buyer_credits - net_price
+    set_user_credits(buyer_id, new_buyer_credits)
 
     # Add the net price to the seller's credits
-    new_seller_credits = seller_credits + net_price
+    new_seller_credits = seller_credits + item_price
     set_user_credits(seller_id, new_seller_credits)
 
     # Send confirmation message to the buyer
     await ctx.send(
-        f"{ctx.author.mention} has purchased '{market_item['name']}' from the market for {item_price} credits! "
-        f"The seller received {net_price} credits after tax."
+        f"{ctx.author.mention} has purchased '{market_item['name']}' from the market for {net_price} credits! "
+        f"The seller received {item_price} credits after tax."
     )
 
     # DM the seller about the purchase
@@ -752,7 +756,7 @@ async def buy(ctx, market_id: int):
         try:
             await seller.send(
                 f"Your item '{market_item['name']}' was purchased by {ctx.author.name}#{ctx.author.discriminator} "
-                f"for {item_price} credits. You received {net_price} credits after tax."
+                f"You received {item_price}"
             )
         except discord.Forbidden:
             await ctx.send(f"Could not DM the seller about the purchase, but the transaction was completed.")
