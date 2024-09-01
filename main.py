@@ -180,11 +180,28 @@ async def spin(ctx):
             rarity += 1
 
         # Determine mob type and multiplier
-        mob_index = random.randint(0, len(mobType) - 1)
+        biased_mob_index = random.random()
+
+        # Calculate adjusted probability for 'Hexagon' and 'Pentagon'
+        hexagon_threshold = 0.001  # Adjust this value for rarity
+        pentagon_threshold = 0.005  # Adjust this value for rarity
+
+        # Determine mob based on thresholds
+        if biased_mob_index < hexagon_threshold:
+            mob_index = mobType.index('Hexagon')
+        elif biased_mob_index < pentagon_threshold:
+            mob_index = mobType.index('Pentagon')
+        else:
+            # Randomly select any other mob, excluding Hexagon and Pentagon
+            mob_index = random.choice([i for i in range(len(mobType)) if mobType[i] not in ['Hexagon', 'Pentagon']])
+
+        # Assign mob name and multiplier
         mob_name = mobType[mob_index]
         mob_multiplier = mobMulti[mob_index]
 
-        final_credits = rarityCredits[rarity] * mob_multiplier
+        final_credits = round(rarityCredits[rarity] * mob_multiplier)
+
+        aya = "+" if final_credits > 0 else ""
 
         current_credits = get_user_credits(user_id)
         new_credits = current_credits + final_credits
@@ -198,7 +215,7 @@ async def spin(ctx):
         if float(luck_multiplier) > 1:
             embed.add_field(name="Frenzy!", value=f"{luck_multiplier}x luck from a sacrifice", inline=False)
         embed.add_field(name="Rare Mob Multiplier!", value=f"x{mob_multiplier}", inline=False)
-        embed.add_field(name=f"+{final_credits} CREDITS", value=f"{rarityCredits[rarity]} ({rarityNames[rarity]}) x{mob_multiplier} ({mob_name})", inline=False)
+        embed.add_field(name=f"{aya}{final_credits} CREDITS", value=f"{rarityCredits[rarity]} ({rarityNames[rarity]}) x{mob_multiplier} ({mob_name})", inline=False)
 
         if db.get("sac_active", False):
             sac_spins = db.get("sac_spins", 0)
@@ -224,7 +241,6 @@ async def spin(ctx):
 
     except Exception as e:
         await ctx.send(f"my goofy ass did this wrong: {e}. Ping a bot coder to fix it")
-
 
 class MarketAddModal(discord.ui.Modal):
     def __init__(self, user_id):
@@ -589,7 +605,7 @@ async def sac(ctx, amount: int):
     embed = discord.Embed(color=0xFFFF00)
     embed.add_field(name="The Flowr gods heed your sacrifice...", value="\u200b", inline=False)
     embed.add_field(name=f"A {luck_multiplier}x luck boost has been activated!", value="\u200b", inline=False)
-    embed.add_field(name="Sacrificed Social Credit", value=f"{amount})", inline=False)
+    embed.add_field(name="Sacrificed Social Credit", value=f"{amount}", inline=False)
     embed.add_field(name="Successful Sacrifice", value=f"{ctx.author.mention} sacrificed {amount} credits!", inline=False)
 
     await ctx.send(embed=embed)
