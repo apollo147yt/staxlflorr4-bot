@@ -54,6 +54,8 @@ replace the "spin" with the channel name you want the bot to be used in or delet
 
 *Optional*
 
+The emojis if wanted to be used on another server you have to create your own bot paste the emoji ID's (from your server) into the "rarity_emoji_mapping"
+
 If you would like to make your own bot and pair the code with it you have to use the [discord devoloper portal](https://discord.com/developers).
 
 ## Discord
