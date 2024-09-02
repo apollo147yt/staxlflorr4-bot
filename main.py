@@ -68,27 +68,27 @@ rarityCredits = [
     10000000, 25000000, 100000000, 250000000, 1000000000, 10**20
 ]
 rarityColors = {
-    'Common': 0x66cdaa,
-    'Uncommon': 0xf0e68c,
-    'Rare': 0xadd8e6,
-    'Epic': 0xd8bfd8,
-    'Legendary': 0xcc0000,
-    'Mythic': 0x00008b,
-    'Ultra': 0xffb6c1,
-    'Super': 0x32cd32,
-    'Omega': 0x404040,
-    'Fabled': 0xff8c00,
-    'Divine': 0x4b0082,
-    'Supreme': 0xff1493,
-    'Omnipotent': 0x808080,
-    'Astral': 0x004d00,
-    'Celestial': 0x87cefa,
-    'Seraphic': 0xff69b4,
+    'Common': 0x7eef6d,
+    'Uncommon': 0xffe65d,
+    'Rare': 0x4d52e3,
+    'Epic': 0x861fde,
+    'Legendary': 0xde1f1f,
+    'Mythic': 0x1fdbde,
+    'Ultra': 0xff2b75,
+    'Super': 0x2bffa3,
+    'Omega': 0x494849,
+    'Fabled': 0xff5500,
+    'Divine': 0x67549c,
+    'Supreme': 0xb25dd9,
+    'Omnipotent': 0x888888,
+    'Astral': 0x046307,
+    'Celestial': 0x00bfff,
+    'Seraphic': 0xc77e5b,
     'Transcendent': 0xffffff,
-    'Quantum': 0x000000,
-    'Galactic': 0xa64d79,
-    'Eternal': 0x13426d,
-    'cHa0s': 0x4c1130
+    'Quantum': 0x61ffdd,
+    'Galactic': 0xba5f7a,
+    'Eternal': 0x5a8c7d,
+    'cHa0s': 0x20258a
 }
 
 # Mob types and multipliers
@@ -111,9 +111,7 @@ async def on_ready():
 
 @bot.command()
 async def spin(ctx):
-    # Allow admins to use the command everywhere
     if not ctx.author.guild_permissions.administrator:
-        # Restrict non-admins to the #spin channel
         if ctx.channel.name != 'spin':
             await ctx.send("This command can only be used in the #spin channel.")
             return
@@ -122,10 +120,7 @@ async def spin(ctx):
         user_id = ctx.author.id
         ensure_user_data(user_id)
 
-        # Set default luck multiplier to 1
         luck_multiplier = db.get("custom_luck_multiplier", 1)
-
-        # Apply sacrifice luck boost if active
         if db.get("sac_active", False):
             sac_amount = db.get("sac_amount", 0)
             luck_multiplier = round(max(0.207125 * (2.34915 * sac_amount + 463.458) ** 0.5 - 4.48083, 1), 1)
@@ -134,8 +129,6 @@ async def spin(ctx):
         rng = random_value / (((luck_multiplier - 1) * 0.7) + 1)
 
         rarity = 0
-
-        # Determine rarity based on RNG
         if rng < 0.55:
             rarity += 1
         if rng < 0.35:
@@ -179,35 +172,53 @@ async def spin(ctx):
         if rng == 0:
             rarity += 1
 
-        # Determine mob type and multiplier
         biased_mob_index = random.random()
+        hexagon_threshold = 0.001
+        pentagon_threshold = 0.005
 
-        # Calculate adjusted probability for 'Hexagon' and 'Pentagon'
-        hexagon_threshold = 0.001  # Adjust this value for rarity
-        pentagon_threshold = 0.005  # Adjust this value for rarity
-
-        # Determine mob based on thresholds
         if biased_mob_index < hexagon_threshold:
             mob_index = mobType.index('Hexagon')
         elif biased_mob_index < pentagon_threshold:
             mob_index = mobType.index('Pentagon')
         else:
-            # Randomly select any other mob, excluding Hexagon and Pentagon
             mob_index = random.choice([i for i in range(len(mobType)) if mobType[i] not in ['Hexagon', 'Pentagon']])
 
-        # Assign mob name and multiplier
         mob_name = mobType[mob_index]
         mob_multiplier = mobMulti[mob_index]
-
         final_credits = round(rarityCredits[rarity] * mob_multiplier)
 
-        aya = "+" if final_credits > 0 else ""
+        integer = "+" if final_credits > 0 else ""
+        emoji_decide = "<:ohyes:1277612067276329052>" if final_credits > 0 else "<:ohno:1277611594401972247>"
+
+        rarity_emoji = ""
+        rarity_emoji_mapping = {
+            0: "<:Common:1280053956118052875>",
+            1: "<:Uncommon:1280054000586067998>",
+            2: "<:Rare:1280054036913197097>",
+            3: "<:Epic:1280054128126590986>",
+            4: "<:Legendary:1280054164168376395>",
+            5: "<:Mythic:1280054213879271581>",
+            6: "<:Ultra:1280054248696188950>",
+            7: "<:Super:1280054279696154737>",
+            8: "<:Omega:1280054308792045609>",
+            9: "<:Fabled:1280054339448209484>",
+            10: "<:Divine:1280054383207252049>",
+            11: "<:Supreme:1280054423741272167>",
+            12: "<:Omnipotent:1280061314177437761>",
+            13: "<:Astral:1280061338801934368>",
+            14: "<:Celestial:1280061360532619329>",
+            15: "<:Seraphic:1280061390803042415>",
+            16: "<:Transcendant:1280061411879424001>",
+            17: "<:Quantum:1280061433144414218>",
+            18: "<:Galactic:1280061456099971133>",
+            19: "<:Eternal:1280061481156608020>"
+        }
+        rarity_emoji = rarity_emoji_mapping.get(rarity, "")
 
         current_credits = get_user_credits(user_id)
         new_credits = current_credits + final_credits
         set_user_credits(user_id, new_credits)
 
-        # Get the color for the rarity
         raritycolor = rarityColors[rarityNames[rarity]]
 
         embed = discord.Embed(color=raritycolor)
@@ -215,7 +226,7 @@ async def spin(ctx):
         if float(luck_multiplier) > 1:
             embed.add_field(name="Frenzy!", value=f"{luck_multiplier}x luck from a sacrifice", inline=False)
         embed.add_field(name="Rare Mob Multiplier!", value=f"x{mob_multiplier}", inline=False)
-        embed.add_field(name=f"{aya}{final_credits} CREDITS", value=f"{rarityCredits[rarity]} ({rarityNames[rarity]}) x{mob_multiplier} ({mob_name})", inline=False)
+        embed.add_field(name=f"{integer}{final_credits} CREDITS {emoji_decide}", value=f"{rarityCredits[rarity]} ({rarityNames[rarity]}) {rarity_emoji} x{mob_multiplier} ({mob_name})", inline=False)
 
         if db.get("sac_active", False):
             sac_spins = db.get("sac_spins", 0)
@@ -223,12 +234,10 @@ async def spin(ctx):
                 if not db.get("sac_limit_reached", False):
                     await ctx.send("Sacrifice spins limit reached.")
                     db["sac_limit_reached"] = True
-                    # Reset luck boost and other sacrifice-related values
                     db["custom_luck_multiplier"] = 1
                     db["sac_amount"] = 0
                     db["sac_active"] = False
                     db["sac_spins"] = 0
-                # Send the result embed even if the limit is reached
                 await ctx.reply(embed=embed, mention_author=True)
             else:
                 db["sac_spins"] += 1
@@ -577,6 +586,9 @@ async def sac(ctx, amount: int):
     if amount <= 0:
         await ctx.send("Amount must be positive.")
         return
+    
+    if amount < 100:
+        await ctx.send("amount must be positive.")
 
     user_id = ctx.author.id
     ensure_user_data(user_id)
@@ -590,7 +602,7 @@ async def sac(ctx, amount: int):
 
     credits = get_user_credits(user_id)
     if credits < net_amount:
-        await ctx.send("You don't have enough credits to sacrifice.")
+        await ctx.send("You don't have enough credits to sacrifice. (note there is a 10% tax)")
         return
 
     db["sac_amount"] = amount
@@ -617,17 +629,15 @@ async def help1(ctx):
     embed = discord.Embed(title="Help", color=0x00ff00)
     embed.add_field(name="!spin", value="Spin the wheel to earn credits and receive a random rarity based on luck and mob type.", inline=False)
     embed.add_field(name="!credit", value="Check your current credit balance.", inline=False)
-    embed.add_field(name="!addcredits <user> <amount>", value="Add credits to a user. Admins only.", inline=False)
-    embed.add_field(name="!removecredits <user> <amount>", value="Remove credits from a user. Admins only.", inline=False)
-    embed.add_field(name="!setcredits <user> <amount>", value="Set a user's credits to a specific amount. Admins only.", inline=False)
-    embed.add_field(name="!endsac", value="End the current sacrifice. Admins only.", inline=False)
-    embed.add_field(name="!unsac", value="Disable sacrifices. Admins only.", inline=False)
-    embed.add_field(name="!assign_role <user> <role>", value="Assign a role to a user. Owner only.", inline=False)
-    embed.add_field(name="!remove_role <user> <role>", value="Remove a role from a user. Owner only.", inline=False)
-    embed.add_field(name="!rig <rarity>", value="Set a rigged spin result to a specific rarity. Admins only.", inline=False)
     embed.add_field(name="!pay <user> <amount>", value="Pay credits to another user with a 10% tax.", inline=False)
     embed.add_field(name="!sac <amount>", value="Sacrifice credits to increase your luck boost.", inline=False)
     embed.add_field(name="!leaderboard", value="Show the top 10 users based on credits.", inline=False)
+    embed.add_field(name="!market <page>", value="Show the current market", inline=False)
+    embed.add_field(name="!addmarket", value="Contribute to the madness of the market", inline=False)
+    embed.add_field(name="!delmarket", value="Delete your own market", inline=False)
+    embed.add_field(name="!buy <Makret_ID>", value="Buy another persons offer", inline=False)
+    embed.add_field(name="!enter", value="If a giveaway is active you enter it.", inline=False)
+    embed.add_field(name="!help1", value="Shows this message.", inline=False)
     await ctx.send(embed=embed)
 
     save_db()
