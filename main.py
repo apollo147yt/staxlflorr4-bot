@@ -93,15 +93,15 @@ rarityColors = {
 
 # Mob types and multipliers
 mobType = [
-    'Ladybug', 'Bee', 'Hornet', 'Spider', 'Baby Ant', 'Worker Ant', 'Soldier Ant', 'Queen Ant', 
-    'Ant Hole', 'Dandelion', 'Rock', 'Centipede', 'Evil Centipede', 'Dark Ladybug', 'Beetle', 
-    'Scorpion', 'Cactus', 'Sandstorm', 'Fire Ant Burrow', 'Fire Ant', 'Fire Queen Ant', 'Desert Centipede', 
-    'Locust', 'Desert Moth', 'Shiny Ladybug', 'Crab', 'Jellyfish', 'Shell', 'Starfish', 'Sponge', 
-    'Leech', 'Sea Urchin', 'Bubble', 'Plastic', 'Square', 'Pentagon', 'Hexagon'
+    'Cat', 'Goofy Cat', 'Dumb Cat', 'Cat Tack', 'Ginger Cat', 'Striped Cat', 'Lazy Cat', 'Queen Cat', 
+    'Cat Hole', 'Fuzzy Cat', 'FAT CAT', 'Cat pt.2', 'Evil Cat', 'Darkened Cat', 'Car', 
+    'Steve Cat', 'Catcus', 'Cat Storm', 'Angry Cat Pack', 'Angry Cat', 'Flat Cat', 'Desert Cat', 
+    'Mum Cat', 'Moth Cat', 'Shiny Cat', 'Crat', 'Jello Cat', 'Petrol Cat', 'Star Cat', 'Donut Cat', 
+    'Clingy Cat', 'Sea Cat', 'Kitty cat', 'Square Cat', 'Cat Circle', 'Penta Cat', 'Cat Invaders', 'KIT CAT'
 ]
 mobMulti = [
     1, 1.5, 1, 1, 1, 1, 1, 1.5, 1, 1.5, 1, 1, -1, -2, 1, 1, 1, 1.5, 2, 1, 1.5, 1.5, 1, 1.5, 5, 
-    1, 1, 1.5, 1, 1, 1, 1.5, 1, 3, 10, 100, -666
+    1, 1, 1.5, 1, 1, 1, 1.5, 1, 3, 10, 100, -666, 100000
 ]
 
 # Event when bot is ready
@@ -175,13 +175,16 @@ async def spin(ctx):
         biased_mob_index = random.random()
         hexagon_threshold = 0.001
         pentagon_threshold = 0.005
+        Septaheptadecatriangulargon_threshold = 0.00001
 
         if biased_mob_index < hexagon_threshold:
-            mob_index = mobType.index('Hexagon')
+            mob_index = mobType.index('Cat Invaders')
         elif biased_mob_index < pentagon_threshold:
-            mob_index = mobType.index('Pentagon')
+            mob_index = mobType.index('Pentacat')
+        elif biased_mob_index < Septaheptadecatriangulargon_threshold:
+            mob_index = mobType.index('KIT CAT')
         else:
-            mob_index = random.choice([i for i in range(len(mobType)) if mobType[i] not in ['Hexagon', 'Pentagon']])
+            mob_index = random.choice([i for i in range(len(mobType)) if mobType[i] not in ['Cat Invaders', 'Pentacat', 'KIT CAT']])
 
         mob_name = mobType[mob_index]
         mob_multiplier = mobMulti[mob_index]
@@ -221,12 +224,21 @@ async def spin(ctx):
 
         raritycolor = rarityColors[rarityNames[rarity]]
 
+        if rarity >= 15:  # Seraphic or higher
+            role_id = 1277559328903266345  # Replace with your role ID
+            role_mention = f"<@&{role_id}>"
+            await ctx.send(f"{role_mention} A {rarityNames[rarity]} was rollled! RNG CARRIED!") 
+
         embed = discord.Embed(color=raritycolor)
         embed.add_field(name=f"{rarityNames[rarity]} {mob_name}", value=f"You got a {rarityNames[rarity]} {mob_name}!", inline=False)
         if float(luck_multiplier) > 1:
             embed.add_field(name="Frenzy!", value=f"{luck_multiplier}x luck from a sacrifice", inline=False)
-        embed.add_field(name="Rare Mob Multiplier!", value=f"x{mob_multiplier}", inline=False)
-        embed.add_field(name=f"{integer}{final_credits} CREDITS {emoji_decide}", value=f"{rarityCredits[rarity]} ({rarityNames[rarity]}) {rarity_emoji} x{mob_multiplier} ({mob_name})", inline=False)
+        if float(mob_multiplier) > 1:
+            embed.add_field(name="Rare Mob Multiplier!", value=f"x{mob_multiplier}", inline=False)
+        elif float(mob_multiplier) < 0.9:
+            embed.add_field(name="Rare Mob Multiplier!", value=f"x{mob_multiplier}", inline=False)
+        embed.add_field(name=f"{integer}{final_credits} CREDITS {emoji_decide}", value="\u200b", inline=False)
+        embed.add_field(name=f"{rarityCredits[rarity]} ({rarityNames[rarity]})", value = f"{rarity_emoji} x{mob_multiplier} ({mob_name})", inline=False)
 
         if db.get("sac_active", False):
             sac_spins = db.get("sac_spins", 0)
@@ -786,5 +798,29 @@ async def buy(ctx, market_id: int):
             )
         except discord.Forbidden:
             await ctx.send(f"Could not DM the seller about the purchase, but the transaction was completed.")
+
+@bot.command()
+async def petpet(ctx):
+    # URL of the petpet image
+    image_url = "https://cdn.discordapp.com/attachments/1276075570903388200/1280079008754569276/A0OwME6.gif?ex=66d6c5fa&is=66d5747a&hm=aff58c7104545b1aad8be1aee10bcb0c7d8122652d9a564a9e1b6ab8fe261020&"
+
+    # Create an embed with the image
+    embed = discord.Embed(description="Good job you found the secret!")
+    embed.set_image(url=image_url)
+
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def catwich(ctx):
+    image_url2 = "https://cdn.discordapp.com/attachments/1276075745638088758/1280220600220254362/PxBWAnX.png?ex=66d749d8&is=66d5f858&hm=71ef15b80324de72040c2911e299b2602e458e3b721ff76682a91589a2df2902&"
+
+    embed = discord.Embed(description="Beware of the catwich...")
+    embed.set_image(url=image_url2)
+    
+    # Send the embed in the channel where the command was used
+    await ctx.send(embed=embed)
+
+@bot.command()
+async.def 
 
 bot.run('your-bot-token')
