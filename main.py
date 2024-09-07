@@ -6,6 +6,8 @@ import json
 import os
 from datetime import timedelta
 import re
+from discord.ui import Modal, TextInput, Select, View, Button
+from discord import SelectOption
 
 # Default data structure
 default_db = {
@@ -18,7 +20,11 @@ default_db = {
     "sac_spins_limit": 10,
     "custom_luck_multiplier": 1,
     "market": {},
-    "giveaway_data": {}
+    "giveaway_data": {},
+    "shop":{},
+    "inventory":{},
+    "lowest_shop_price":{},
+    "market_id":{}
 }
 
 # Ensure the database file exists
@@ -30,10 +36,23 @@ if not os.path.exists("db.json"):
 with open("db.json", "r") as f:
     db = json.load(f)
 
+def get_next_item_id():
+    """Get the next unique item ID."""
+    if not db["market_id"]:
+        return 1
+    return max(int(item_id) for item_id in db["market_id"]) + 1
+
 # Function to save the database
 def save_db():
     with open("db.json", "w") as f:
         json.dump(db, f, indent=4)
+
+def add_to_inventory(user_id, item_name):
+    if user_id not in default_db["inventory"]:
+        default_db["inventory"][user_id] = []
+    
+    # Add the item to the user's inventory
+    default_db["inventory"][user_id].append({"name": item_name})
 
 # Ensure user data exists
 def ensure_user_data(user_id):
@@ -104,6 +123,10 @@ mobMulti = [
     1, 1, 1.5, 1, 1, 1, 1.5, 1, 3, 10, 100, -666, 100000
 ]
 
+Items = [
+    'Dirty Fur', 'Dull Claw', 'Furry Sword', 'Staxl Statue', 'Apollo Hair', 'Clean Fur', 'Sharp Claw', 'Shit'
+]
+
 # Event when bot is ready
 @bot.event
 async def on_ready():
@@ -120,68 +143,48 @@ async def spin(ctx):
         user_id = ctx.author.id
         ensure_user_data(user_id)
 
+        # Determine luck multiplier
         luck_multiplier = db.get("custom_luck_multiplier", 1)
         if db.get("sac_active", False):
             sac_amount = db.get("sac_amount", 0)
             luck_multiplier = round(max(0.207125 * (2.34915 * sac_amount + 463.458) ** 0.5 - 4.48083, 1), 1)
 
+        # RNG calculation
         random_value = random.random()
         rng = random_value / (((luck_multiplier - 1) * 0.7) + 1)
 
+        # Rarity determination
         rarity = 0
-        if rng < 0.55:
-            rarity += 1
-        if rng < 0.35:
-            rarity += 1
-        if rng < 0.2:
-            rarity += 1
-        if rng < 0.1:
-            rarity += 1
-        if rng < 0.05:
-            rarity += 1
-        if rng < 0.02:
-            rarity += 1
-        if rng < 0.01:
-            rarity += 1
-        if rng < 0.005:
-            rarity += 1
-        if rng < 0.0025:
-            rarity += 1
-        if rng < 0.001:
-            rarity += 1
-        if rng < 0.00044:
-            rarity += 1
-        if rng < 0.00014:
-            rarity += 1
-        if rng < 0.00004:
-            rarity += 1
-        if rng < 0.00001:
-            rarity += 1
-        if rng < 0.000004:
-            rarity += 1
-        if rng < 0.000001:
-            rarity += 1
-        if rng < 0.0000004:
-            rarity += 1
-        if rng < 0.0000001:
-            rarity += 1
-        if rng < 0.00000004:
-            rarity += 1
-        if rng < 0.00000001:
-            rarity += 1
-        if rng == 0:
-            rarity += 1
+        if rng < 0.55: rarity += 1
+        if rng < 0.35: rarity += 1
+        if rng < 0.2:  rarity += 1
+        if rng < 0.1:  rarity += 1
+        if rng < 0.05: rarity += 1
+        if rng < 0.02: rarity += 1
+        if rng < 0.01: rarity += 1
+        if rng < 0.005: rarity += 1
+        if rng < 0.0025: rarity += 1
+        if rng < 0.001: rarity += 1
+        if rng < 0.00044: rarity += 1
+        if rng < 0.00014: rarity += 1
+        if rng < 0.00004: rarity += 1
+        if rng < 0.00001: rarity += 1
+        if rng < 0.000004: rarity += 1
+        if rng < 0.000001: rarity += 1
+        if rng < 0.0000004: rarity += 1
+        if rng < 0.0000001: rarity += 1
+        if rng < 0.00000004: rarity += 1
+        if rng < 0.00000001: rarity += 1
+        if rng == 0: rarity += 1
 
+        # Mob index calculation
         biased_mob_index = random.random()
-        hexagon_threshold = 0.001
-        pentagon_threshold = 0.005
-        Septaheptadecatriangulargon_threshold = 0.00001
-
-        if biased_mob_index < hexagon_threshold:
+        mob_index = None
+        if biased_mob_index < 0.001:
             mob_index = mobType.index('Cat Invaders')
-        elif biased_mob_index < pentagon_threshold:
+        elif biased_mob_index < 0.005:
             mob_index = mobType.index('Pentacat')
-        elif biased_mob_index < Septaheptadecatriangulargon_threshold:
+        elif biased_mob_index < 0.00001:
             mob_index = mobType.index('KIT CAT')
         else:
             mob_index = random.choice([i for i in range(len(mobType)) if mobType[i] not in ['Cat Invaders', 'Pentacat', 'KIT CAT']])
@@ -190,10 +193,17 @@ async def spin(ctx):
         mob_multiplier = mobMulti[mob_index]
         final_credits = round(rarityCredits[rarity] * mob_multiplier)
 
+        # Item determination
+        Item_get = False
+        if random.randint(1, 1000) == 69:
+            Item = random.choice(Items)
+            add_to_inventory(user_id, Item)
+            Item_get = True
+
+        # Determine emoji and rarity
         integer = "+" if final_credits > 0 else ""
         emoji_decide = "<:ohyes:1277612067276329052>" if final_credits > 0 else "<:ohno:1277611594401972247>"
 
-        rarity_emoji = ""
         rarity_emoji_mapping = {
             0: "<:Common:1280053956118052875>",
             1: "<:Uncommon:1280054000586067998>",
@@ -218,17 +228,21 @@ async def spin(ctx):
         }
         rarity_emoji = rarity_emoji_mapping.get(rarity, "")
 
+        # Update user's credits
         current_credits = get_user_credits(user_id)
         new_credits = current_credits + final_credits
         set_user_credits(user_id, new_credits)
 
+        # Determine rarity color
         raritycolor = rarityColors[rarityNames[rarity]]
 
-        if rarity >= 15:  # Seraphic or higher
+        # Notify role if rarity is Seraphic or higher
+        if rarity >= 15:
             role_id = 1277559328903266345  # Replace with your role ID
             role_mention = f"<@&{role_id}>"
-            await ctx.send(f"{role_mention} A {rarityNames[rarity]} was rollled! RNG CARRIED!") 
-
+            await ctx.send(f"{role_mention} A {rarity_emoji} {rarityNames[rarity]} rarity item was just spun by <@{ctx.author.id}>!")
+        
+        # Create embed message
         embed = discord.Embed(color=raritycolor)
         embed.add_field(name=f"{rarityNames[rarity]} {mob_name}", value=f"You got a {rarityNames[rarity]} {mob_name}!", inline=False)
         if float(luck_multiplier) > 1:
@@ -238,8 +252,11 @@ async def spin(ctx):
         elif float(mob_multiplier) < 0.9:
             embed.add_field(name="Rare Mob Multiplier!", value=f"x{mob_multiplier}", inline=False)
         embed.add_field(name=f"{integer}{final_credits} CREDITS {emoji_decide}", value="\u200b", inline=False)
-        embed.add_field(name=f"{rarityCredits[rarity]} ({rarityNames[rarity]})", value = f"{rarity_emoji} x{mob_multiplier} ({mob_name})", inline=False)
+        embed.add_field(name=f"{rarityCredits[rarity]} ({rarityNames[rarity]})", value=f"{rarity_emoji} x{mob_multiplier} ({mob_name})", inline=False)
+        if Item_get:
+            embed.add_field(name=f"You got a {Item}!", value="\u200b", inline=False)
 
+        # Handle sacrifice spins limit
         if db.get("sac_active", False):
             sac_spins = db.get("sac_spins", 0)
             if sac_spins >= db.get("sac_spins_limit", 10):
@@ -270,7 +287,7 @@ class MarketAddModal(discord.ui.Modal):
         self.add_item(discord.ui.TextInput(label="Name of Service", placeholder="Enter the name of the service", custom_id="name_input", required=True))
         self.add_item(discord.ui.TextInput(label="Description of Service", placeholder="Enter a description", custom_id="description_input", required=True))
         self.add_item(discord.ui.TextInput(label="Price of Service (min 10k)", placeholder="Enter the price", custom_id="price_input", required=True))
-
+        
     async def on_submit(self, interaction: discord.Interaction):
         name = self.children[0].value
         description = self.children[1].value
@@ -600,7 +617,7 @@ async def sac(ctx, amount: int):
         return
     
     if amount < 100:
-        await ctx.send("amount must be positive.")
+        await ctx.send("You can't sacrifice more then 100 credits buddy!")
 
     user_id = ctx.author.id
     ensure_user_data(user_id)
@@ -820,7 +837,211 @@ async def catwich(ctx):
     # Send the embed in the channel where the command was used
     await ctx.send(embed=embed)
 
-@bot.command()
-async.def 
+class AddShopModal(Modal):
+    def __init__(self, selected_item):
+        super().__init__(title="Add Item to Shop")
+        self.selected_item = selected_item
 
-bot.run('your-bot-token')
+        # Define a text input for the price
+        self.add_item(TextInput(
+            label=f"Price of {self.selected_item} (minimum of 10 credits)",
+            placeholder="Enter price",
+            required=True
+        ))
+
+    async def on_submit(self, interaction: discord.Interaction):
+        user_id = interaction.user.id
+        item_name = self.selected_item
+
+        # Check if user has the item in their inventory
+        user_inventory = default_db.get("inventory", {}).get(user_id, [])
+        item_names = [item['name'] for item in user_inventory]
+        if item_name not in item_names:
+            await interaction.response.send_message("You don't have this item in your inventory.", ephemeral=True)
+            return
+
+        try:
+            item_price = int(self.children[0].value)
+            if item_price < 10:
+                await interaction.response.send_message("The price must be at least 10 credits.", ephemeral=True)
+                return
+        except ValueError:
+            await interaction.response.send_message("Invalid price. Please enter a numeric value.", ephemeral=True)
+            return
+
+        # Update inventory (remove item) and add to shop
+        user_inventory = [item for item in user_inventory if item['name'] != item_name]
+        default_db["inventory"][user_id] = user_inventory
+
+        shop_id = len(default_db["shop"]) + 1
+        default_db["shop"][shop_id] = {
+            "name": item_name,
+            "price": item_price,
+            "seller": interaction.user.name
+        }
+
+        # Update the lowest price for this item
+        lowest_price = default_db["lowest_shop_price"].get(item_name)
+        if lowest_price is None or item_price < lowest_price:
+            default_db["lowest_shop_price"][item_name] = item_price
+
+        await interaction.response.send_message(f"Item '{item_name}' added to the shop for {item_price} credits.", ephemeral=True)
+        save_db()
+
+class ItemSelect(Select):
+    def __init__(self, user_id):
+        # Get user inventory to populate the dropdown
+        user_inventory = default_db.get("inventory", {}).get(user_id, [])
+        
+        # Extract item names from the user's inventory
+        item_names = [item['name'] for item in user_inventory]
+        
+        # Create options for the Select menu
+        options = [SelectOption(label=item, value=item) for item in set(item_names)]
+        
+        super().__init__(placeholder="Choose an item to sell", options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        selected_item = self.values[0]
+        modal = AddShopModal(selected_item)
+        await interaction.response.send_modal(modal)
+
+@bot.command()
+async def addshop(ctx):
+    user_id = ctx.author.id
+    user_inventory = default_db.get("inventory", {}).get(user_id, [])
+    
+    if not user_inventory:
+        await ctx.send("You don't have any items in your inventory to add to the shop.")
+        return
+    
+    # Send the item selection dropdown
+    view = View()
+    view.add_item(ItemSelect(user_id))
+    await ctx.send("Select an item from your inventory to add to the shop:", view=view)
+
+@bot.command()
+async def shop(ctx):
+    embed = discord.Embed(title="Shop Offers", description="Browse items available for purchase")
+    shop_items = default_db.get("shop", {})
+    
+    if not shop_items:
+        embed.add_field(name="No items available", value="Currently, no items are being sold.")
+    else:
+        for shop_id, item in shop_items.items():
+            embed.add_field(
+                name=f"Item ID: {shop_id}",
+                value=f"Item: {item['name']}\nPrice: {item['price']} credits\nSeller: {item['seller']}",
+                inline=False
+            )
+    
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def buyshop(ctx, shop_id: int):
+    shop_items = default_db.get("shop", {})
+    item = shop_items.get(shop_id)
+    user_id = ctx.author.id
+    
+    if not item:
+        await ctx.send("Item not found.")
+        return
+
+    buyer_credits = get_user_credits(user_id)
+    
+    # Log the values for debugging
+    print(f"Buyer credits: {buyer_credits}")
+    print(f"Item price: {item['price']}")
+
+    if buyer_credits < item['price']:
+        await ctx.send("You don't have enough credits to buy this item.")
+        return
+
+    # Apply 10% tax
+    tax = item['price'] * 0.1
+    final_price = item['price'] + tax
+
+    # Round final_price to avoid floating-point issues
+    final_price = round(final_price, 2)
+
+    # Deduct credits from buyer and update seller's credits
+    if buyer_credits < final_price:
+        await ctx.send("You don't have enough credits to buy this item.")
+        return
+
+    set_user_credits(user_id, buyer_credits - final_price)
+    
+    seller_name = item['seller']
+    seller_id = discord.utils.get(ctx.guild.members, name=seller_name).id
+    default_db["Social_credits"][seller_id] = round(default_db["Social_credits"].get(seller_id, 0) + item['price'], 2)
+    
+    # Transfer item to buyer's inventory
+    user_inventory = default_db.get("inventory", {}).setdefault(ctx.author.id, [])
+    user_inventory.append(item['name'])
+    
+    # Remove item from shop
+    del default_db["shop"][shop_id]
+    
+    await ctx.send(f"You bought '{item['name']}' for {final_price} credits (including 10% tax).")
+
+    # Update the lowest price for the specific item
+    remaining_items = [i for i in shop_items.values() if i['name'] == item['name']]
+    if remaining_items:
+        default_db["lowest_shop_price"][item['name']] = min(i['price'] for i in remaining_items)
+    else:
+        del default_db["lowest_shop_price"][item['name']]
+    
+    save_db()  # Ensure the database is saved after the change
+
+@bot.command()
+async def inventory(ctx):
+    user_inventory = default_db.get("inventory", {}).get(ctx.author.id, [])
+    
+    if not user_inventory:
+        await ctx.send("Your inventory is empty.")
+        return
+
+    embed = discord.Embed(title=f"{ctx.author.name}'s Inventory")
+    
+    # Fetch the lowest prices for each item from the database
+    lowest_prices = default_db.get("lowest_shop_price", {})
+
+    for item in user_inventory:
+        lowest_price = lowest_prices.get(item, "Unknown")  # Get the lowest price or "Unknown" if not found
+        embed.add_field(name=item, value=f"Lowest Price: {lowest_price} credits", inline=False)
+    
+    await ctx.send(embed=embed)
+    save_db()
+
+@bot.command()
+@commands.has_permissions(administrator=True)  # Restrict to admins only
+async def additem(ctx, user: discord.Member, *, item_name: str):
+    # Check if the item exists in the valid items list
+    if item_name not in Items:
+        await ctx.send(f"'{item_name}' is not a valid item. Please choose from the following: {', '.join(Items)}")
+        return
+
+    # Fetch the user's inventory from the database or create an empty one if it doesn't exist
+    user_inventory = default_db.get("inventory", {}).setdefault(user.id, [])
+
+    # Add the item to the user's inventory
+    user_inventory.append({"name": item_name})
+
+    # Save the updated inventory back to the database
+    default_db["inventory"][user.id] = user_inventory
+    save_db()  # Ensure the database is saved after the change
+
+    # Send a confirmation message
+    await ctx.send(f"Added {item_name} to {user.name}'s inventory.")
+
+# Error handling if the command is used by someone without admin permissions
+@additem.error
+async def additem_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("You do not have permission to use this command.")
+
+@bot.command()
+async def ping(ctx):
+    await ctx.send('Pong!')
+
+bot.run('bot-toke-here')
