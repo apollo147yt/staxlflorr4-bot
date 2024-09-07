@@ -1044,4 +1044,4 @@ async def additem_error(ctx, error):
 async def ping(ctx):
     await ctx.send('Pong!')
 
-bot.run('bot-toke-here')
+bot.run('bot-token-here')
