@@ -39,6 +39,16 @@ Another Special thanks to all on our discord server helping us find bugs and Sug
 
 "!buy [market_id]" buy a market offer
 
+"!shop [page]" check the items on sale that are obtained through spinning
+
+"!addshop" add a sell offer for an item
+
+"!buyshop [shop_id]" buy a shop offer
+
+"!inventory" check your obtained items
+
+"!additem [user] [item]" give an item (admin only)  
+
 ## Instructions for setup
 Use python. (This bot is written in python. To edit the code use a code editor such as VScode).
 to start copy the code down or download it whatever you prefer.
