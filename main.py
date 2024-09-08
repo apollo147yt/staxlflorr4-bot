@@ -7,7 +7,7 @@ import os
 from datetime import timedelta
 import re
 from discord.ui import Modal, TextInput, Select, View, Button
-from discord import SelectOption
+from discord import Interaction, SelectOption
 
 # Default data structure
 default_db = {
@@ -41,6 +41,19 @@ def get_next_item_id():
     if not db["market_id"]:
         return 1
     return max(int(item_id) for item_id in db["market_id"]) + 1
+
+def lowest_price(item_name):
+    # Filter the shop to find all instances of the same item
+    shop_items = default_db.get("shop", {})
+    item_prices = [item['price'] for item in shop_items.values() if item['name'] == item_name]
+    
+    # Update the lowest price in the database
+    if item_prices:
+        default_db["lowest_shop_price"][item_name] = min(item_prices)
+    else:
+        # If no items of that type remain in the shop, remove the entry from the lowest price db
+        if item_name in default_db["lowest_shop_price"]:
+            del default_db["lowest_shop_price"][item_name]
 
 # Function to save the database
 def save_db():
@@ -183,7 +196,7 @@ async def spin(ctx):
         if biased_mob_index < 0.001:
             mob_index = mobType.index('Cat Invaders')
         elif biased_mob_index < 0.005:
-            mob_index = mobType.index('Pentacat')
+            mob_index = mobType.index('Penta Cat')
         elif biased_mob_index < 0.00001:
             mob_index = mobType.index('KIT CAT')
         else:
@@ -838,30 +851,49 @@ async def catwich(ctx):
     await ctx.send(embed=embed)
 
 class AddShopModal(Modal):
-    def __init__(self, selected_item):
+    def __init__(self, selected_item, user_id, available_quantity):
         super().__init__(title="Add Item to Shop")
         self.selected_item = selected_item
+        self.user_id = user_id
+        self.available_quantity = available_quantity
+
+        # Shorten the label to fit within Discord's 45 character limit
+        item_label = f"Qty of {self.selected_item} (avail: {self.available_quantity})"
+
+        # Define a text input for the quantity with the shortened label
+        self.add_item(TextInput(
+            label=item_label[:45],  # Ensure the label is 45 characters or fewer
+            placeholder="Enter quantity",
+            required=True
+        ))
 
         # Define a text input for the price
         self.add_item(TextInput(
-            label=f"Price of {self.selected_item} (minimum of 10 credits)",
+            label="Price per item (min 10 credits)",
             placeholder="Enter price",
             required=True
         ))
 
     async def on_submit(self, interaction: discord.Interaction):
-        user_id = interaction.user.id
         item_name = self.selected_item
 
-        # Check if user has the item in their inventory
-        user_inventory = default_db.get("inventory", {}).get(user_id, [])
-        item_names = [item['name'] for item in user_inventory]
-        if item_name not in item_names:
-            await interaction.response.send_message("You don't have this item in your inventory.", ephemeral=True)
+        # Check if the user has the item in their inventory
+        user_inventory = default_db.get("inventory", {}).get(self.user_id, [])
+        item_count = sum(item['name'] == item_name for item in user_inventory)
+
+        # Validate the quantity
+        try:
+            quantity = int(self.children[0].value)
+            if quantity <= 0 or quantity > item_count:
+                await interaction.response.send_message("Invalid quantity.", ephemeral=True)
+                return
+        except ValueError:
+            await interaction.response.send_message("Invalid quantity. Please enter a numeric value.", ephemeral=True)
             return
 
+        # Validate the price
         try:
-            item_price = int(self.children[0].value)
+            item_price = int(self.children[1].value)
             if item_price < 10:
                 await interaction.response.send_message("The price must be at least 10 credits.", ephemeral=True)
                 return
@@ -870,12 +902,16 @@ class AddShopModal(Modal):
             return
 
         # Update inventory (remove item) and add to shop
-        user_inventory = [item for item in user_inventory if item['name'] != item_name]
-        default_db["inventory"][user_id] = user_inventory
+        remaining_inventory = [item for item in user_inventory if item['name'] != item_name]
+        for _ in range(item_count - quantity):
+            remaining_inventory.append({"name": item_name})
+
+        default_db["inventory"][self.user_id] = remaining_inventory
 
         shop_id = len(default_db["shop"]) + 1
         default_db["shop"][shop_id] = {
             "name": item_name,
+            "quantity": quantity,
             "price": item_price,
             "seller": interaction.user.name
         }
@@ -885,7 +921,7 @@ class AddShopModal(Modal):
         if lowest_price is None or item_price < lowest_price:
             default_db["lowest_shop_price"][item_name] = item_price
 
-        await interaction.response.send_message(f"Item '{item_name}' added to the shop for {item_price} credits.", ephemeral=True)
+        await interaction.response.send_message(f"Item '{item_name}' added to the shop: {quantity} units at {item_price} credits each.", ephemeral=True)
         save_db()
 
 class ItemSelect(Select):
@@ -893,19 +929,27 @@ class ItemSelect(Select):
         # Get user inventory to populate the dropdown
         user_inventory = default_db.get("inventory", {}).get(user_id, [])
         
-        # Extract item names from the user's inventory
-        item_names = [item['name'] for item in user_inventory]
+        # Extract item names and count from the user's inventory
+        item_counts = {}
+        for item in user_inventory:
+            item_name = item['name']
+            item_counts[item_name] = item_counts.get(item_name, 0) + 1
         
         # Create options for the Select menu
-        options = [SelectOption(label=item, value=item) for item in set(item_names)]
+        options = [SelectOption(label=f"{item} (x{count})", value=item) for item, count in item_counts.items()]
         
         super().__init__(placeholder="Choose an item to sell", options=options)
+        self.user_id = user_id
 
     async def callback(self, interaction: discord.Interaction):
         selected_item = self.values[0]
-        modal = AddShopModal(selected_item)
+        user_inventory = default_db.get("inventory", {}).get(self.user_id, [])
+        available_quantity = sum(item['name'] == selected_item for item in user_inventory)
+        
+        modal = AddShopModal(selected_item, self.user_id, available_quantity)
         await interaction.response.send_modal(modal)
 
+# Command to add an item to the shop
 @bot.command()
 async def addshop(ctx):
     user_id = ctx.author.id
@@ -920,6 +964,7 @@ async def addshop(ctx):
     view.add_item(ItemSelect(user_id))
     await ctx.send("Select an item from your inventory to add to the shop:", view=view)
 
+# Command to view shop items
 @bot.command()
 async def shop(ctx):
     embed = discord.Embed(title="Shop Offers", description="Browse items available for purchase")
@@ -931,14 +976,15 @@ async def shop(ctx):
         for shop_id, item in shop_items.items():
             embed.add_field(
                 name=f"Item ID: {shop_id}",
-                value=f"Item: {item['name']}\nPrice: {item['price']} credits\nSeller: {item['seller']}",
+                value=f"Item: {item['name']}\nQuantity: {item['quantity']}\nPrice: {item['price']} credits each\nSeller: {item['seller']}",
                 inline=False
             )
     
     await ctx.send(embed=embed)
 
+# Command to buy an item from the shop
 @bot.command()
-async def buyshop(ctx, shop_id: int):
+async def buyshop(ctx, shop_id: int, quantity: int = 1):
     shop_items = default_db.get("shop", {})
     item = shop_items.get(shop_id)
     user_id = ctx.author.id
@@ -947,42 +993,44 @@ async def buyshop(ctx, shop_id: int):
         await ctx.send("Item not found.")
         return
 
-    buyer_credits = get_user_credits(user_id)
-    
-    # Log the values for debugging
-    print(f"Buyer credits: {buyer_credits}")
-    print(f"Item price: {item['price']}")
+    if quantity <= 0 or quantity > item['quantity']:
+        await ctx.send(f"Invalid quantity. There are only {item['quantity']} of {item['name']} available.")
+        return
 
-    if buyer_credits < item['price']:
+    total_price = item['price'] * quantity
+    buyer_credits = get_user_credits(user_id)
+
+    if buyer_credits < total_price:
         await ctx.send("You don't have enough credits to buy this item.")
         return
 
     # Apply 10% tax
-    tax = item['price'] * 0.1
-    final_price = item['price'] + tax
+    tax = total_price * 0.1
+    final_price = total_price + tax
 
-    # Round final_price to avoid floating-point issues
-    final_price = round(final_price, 2)
-
-    # Deduct credits from buyer and update seller's credits
     if buyer_credits < final_price:
         await ctx.send("You don't have enough credits to buy this item.")
         return
 
+    # Deduct credits from buyer and update seller's credits
     set_user_credits(user_id, buyer_credits - final_price)
     
     seller_name = item['seller']
     seller_id = discord.utils.get(ctx.guild.members, name=seller_name).id
-    default_db["Social_credits"][seller_id] = round(default_db["Social_credits"].get(seller_id, 0) + item['price'], 2)
+    default_db["Social_credits"][seller_id] = round(default_db["Social_credits"].get(seller_id, 0) + total_price, 2)
     
     # Transfer item to buyer's inventory
     user_inventory = default_db.get("inventory", {}).setdefault(ctx.author.id, [])
-    user_inventory.append(item['name'])
+    for _ in range(quantity):
+        user_inventory.append({"name": item['name']})
     
-    # Remove item from shop
-    del default_db["shop"][shop_id]
+    # Update the shop item quantity or remove it if sold out
+    if item['quantity'] > quantity:
+        default_db["shop"][shop_id]['quantity'] -= quantity
+    else:
+        del default_db["shop"][shop_id]
     
-    await ctx.send(f"You bought '{item['name']}' for {final_price} credits (including 10% tax).")
+    await ctx.send(f"You bought {quantity} x '{item['name']}' for {final_price} credits (including 10% tax).")
 
     # Update the lowest price for the specific item
     remaining_items = [i for i in shop_items.values() if i['name'] == item['name']]
@@ -991,8 +1039,9 @@ async def buyshop(ctx, shop_id: int):
     else:
         del default_db["lowest_shop_price"][item['name']]
     
-    save_db()  # Ensure the database is saved after the change
+    save_db()
 
+# Command to view the user's inventory
 @bot.command()
 async def inventory(ctx):
     user_inventory = default_db.get("inventory", {}).get(ctx.author.id, [])
@@ -1003,45 +1052,44 @@ async def inventory(ctx):
 
     embed = discord.Embed(title=f"{ctx.author.name}'s Inventory")
     
+    # Count occurrences of each item in the inventory
+    item_counts = {}
+    for item in user_inventory:
+        item_name = item['name']
+        if item_name in item_counts:
+            item_counts[item_name] += 1
+        else:
+            item_counts[item_name] = 1
+    
     # Fetch the lowest prices for each item from the database
     lowest_prices = default_db.get("lowest_shop_price", {})
 
-    for item in user_inventory:
-        lowest_price = lowest_prices.get(item, "Unknown")  # Get the lowest price or "Unknown" if not found
-        embed.add_field(name=item, value=f"Lowest Price: {lowest_price} credits", inline=False)
+    # Add grouped items to the embed
+    for item_name, count in item_counts.items():
+        lowest_price = lowest_prices.get(item_name, "Unknown")
+        embed.add_field(name=f"{item_name} (x{count})", value=f"Lowest Price: {lowest_price} credits", inline=False)
     
     await ctx.send(embed=embed)
     save_db()
 
+# Command to add an item to a user's inventory (admin only)
 @bot.command()
 @commands.has_permissions(administrator=True)  # Restrict to admins only
 async def additem(ctx, user: discord.Member, *, item_name: str):
     # Check if the item exists in the valid items list
     if item_name not in Items:
-        await ctx.send(f"'{item_name}' is not a valid item. Please choose from the following: {', '.join(Items)}")
+        await ctx.send(f"{item_name} is not a valid item.")
         return
 
-    # Fetch the user's inventory from the database or create an empty one if it doesn't exist
-    user_inventory = default_db.get("inventory", {}).setdefault(user.id, [])
-
     # Add the item to the user's inventory
+    user_inventory = default_db.get("inventory", {}).setdefault(user.id, [])
     user_inventory.append({"name": item_name})
 
-    # Save the updated inventory back to the database
-    default_db["inventory"][user.id] = user_inventory
-    save_db()  # Ensure the database is saved after the change
-
-    # Send a confirmation message
-    await ctx.send(f"Added {item_name} to {user.name}'s inventory.")
-
-# Error handling if the command is used by someone without admin permissions
-@additem.error
-async def additem_error(ctx, error):
-    if isinstance(error, commands.MissingPermissions):
-        await ctx.send("You do not have permission to use this command.")
+    await ctx.send(f"{item_name} has been added to {user.name}'s inventory.")
+    save_db()
 
 @bot.command()
 async def ping(ctx):
     await ctx.send('Pong!')
 
-bot.run('bot-token-here')
+bot.run('your-bot-token')
